@@ -8,6 +8,7 @@ import 'package:workmanager/workmanager.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import 'package:sqflite_common_ffi/sqflite_ffi.dart'; // 🟢 উইন্ডোজ ডাটাবেজ ইমপোর্ট
 import 'database_helper.dart';
 import 'firebase_options.dart';
 import 'splash_screen.dart';
@@ -249,7 +250,13 @@ Future<void> _showCustomNoticeDialog(String title, String body, {String? url}) a
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 🟢 উইন্ডোজ/মোবাইল গার্ড (যেটির কারণে ডেক্সটপ অ্যাপ ক্র্যাশ করতো)
+  // 🟢 উইন্ডোজ / ডেক্সটপের জন্য ডাটাবেজ ইঞ্জিন অন করা
+  if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+  }
+
+  // 🟢 মোবাইল বনাম ডেক্সটপ গার্ড
   bool isMobile = !kIsWeb && (Platform.isAndroid || Platform.isIOS);
 
   try {
@@ -257,7 +264,7 @@ Future<void> main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
   } catch (e) {
-    debugPrint("Firebase init bypassed for desktop/other platforms: $e");
+    debugPrint("Firebase init bypassed for desktop: $e");
   }
 
   if (isMobile) {
@@ -265,7 +272,6 @@ Future<void> main() async {
       _firebaseMessagingBackgroundHandler,
     );
 
-    // ১. লোকাল নোটিফিকেশন সেটআপ
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
@@ -282,7 +288,6 @@ Future<void> main() async {
       },
     );
 
-    // ২. ফায়ারবেস কাস্টম নোটিফিকেশনে ক্লিকে ডায়ালগ নোটিশ
     FirebaseMessaging.instance.getInitialMessage().then((RemoteMessage? message) {
       if (message != null) {
         final title = message.notification?.title ?? message.data['title'] ?? 'জরুরি বিজ্ঞপ্তি';
@@ -323,7 +328,6 @@ Future<void> main() async {
       }
     });
 
-    // ৩. ব্যাকগ্রাউন্ড ওয়ার্কম্যানেজার ও সিডিউল
     try {
       Workmanager().initialize(callbackDispatcher);
       Workmanager().registerPeriodicTask(
@@ -332,13 +336,11 @@ Future<void> main() async {
         frequency: const Duration(hours: 24),
       );
 
-      // প্রতিদিন সকাল ৯:০০ টায় নোটিফিকেশন সিডিউল
-      await scheduleDailyMasalaNotification(hour: 14, minute: 15);
+      await scheduleDailyMasalaNotification(hour: 15, minute: 0);
     } catch (e) {
       debugPrint("Workmanager error: $e");
     }
 
-    // ৪. পারমিশন ও FCM টোকেন
     final messaging = FirebaseMessaging.instance;
     await messaging.requestPermission(
       alert: true,

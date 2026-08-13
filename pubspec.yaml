@@ -10,6 +10,8 @@ dependencies:
   flutter:
     sdk: flutter
   sqflite: ^2.3.3+1         # SQLite ডাটাবেসের জন্য
+  sqflite_common_ffi: ^2.3.3 # 🟢 উইন্ডোজ ডাটাবেজ লোড হওয়ার জন্য
+  window_manager: ^0.3.9    # 🟢 ওপরের কালো টাইটেল বার সরানোর জন্য
   path: ^1.9.0             # ফাইল পাথ ম্যানেজ করার জন্য
   share_plus: ^10.0.0      # মাসআলা শেয়ার করার জন্য
   shared_preferences: ^2.5.5
@@ -19,7 +21,7 @@ dependencies:
   flutter_local_notifications: ^19.4.2
   workmanager: ^0.10.7
   url_launcher: ^6.3.0     # কাস্টম নোটিশের লিংক খোলার জন্য
-  timezone: ^0.10.0        # 🟢 ভার্সন আপডেট করা হয়েছে (^0.10.0)
+  timezone: ^0.10.0     # 🟢 ভার্সন আপডেট করা হয়েছে (^0.10.0)
 
 dev_dependencies:
   flutter_test:
