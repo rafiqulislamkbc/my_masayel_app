@@ -31,8 +31,10 @@ jobs:
       - name: Get Dependencies
         run: flutter pub get
 
-      # 🟢 ১. উইন্ডোজ এক্সই (.exe) বিল্ড করা
+      # 🟢 ১. উইন্ডোজ এক্সই (.exe) বিল্ড করা (MSVC Coroutine Warning Bypass সহ)
       - name: Build Windows
+        env:
+          CL: "/D_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS"
         run: flutter build windows --release
 
       # 🟢 ২. অ্যান্ড্রয়েড এপিকে (.apk) বিল্ড করা
