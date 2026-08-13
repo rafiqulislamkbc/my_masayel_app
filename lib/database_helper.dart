@@ -17,41 +17,47 @@ class DatabaseHelper {
   static Future<Database> _initDatabase() async {
     String dbPath = '';
 
-    // 🟢১. প্ল্যাটফর্ম সনাক্তকরণ ও সঠিক পাথ নির্ধারণ (উইন্ডোজ বনাম মোবাইল)
+    // 🟢 ১. উইন্ডোজ/ডেক্সটপ ডাটাবেজ ইঞ্জিন ইনিশিয়ালাইজেশন
     if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
       sqfliteFfiInit();
       databaseFactory = databaseFactoryFfi;
 
-      final appDocDir = await getApplicationSupportDirectory();
-      dbPath = join(appDocDir.path, "masayel_app", "masayel.db");
+      final appSupportDir = await getApplicationSupportDirectory();
+      dbPath = join(appSupportDir.path, "masayel.db");
     } else {
       var databasesPath = await getDatabasesPath();
       dbPath = join(databasesPath, "masayel.db");
     }
 
-    // 🟢২. উইন্ডোজের জন্য ডিরেক্টরি তৈরি নিশ্চিত করা
-    try {
-      await Directory(dirname(dbPath)).create(recursive: true);
-    } catch (e) {
-      debugPrint("Directory creation error: $e");
+    // 🟢 ২. ডিরেক্টরি নিশ্চিত করা
+    final file = File(dbPath);
+    if (!await file.parent.exists()) {
+      await file.parent.create(recursive: true);
     }
 
-    // 🟢৩. Assets থেকে masayel.db কপি করা (যদি আগে থেকে না থাকে)
-    bool exists = await databaseExists(dbPath);
+    // 🟢 ৩. ডাটাবেজ ফাইল যদি না থাকে অথবা ফাইল সাইজ ০ বাইট হয়, তবে Assets থেকে নতুন করে কপি করা
+    bool isFileCorruptOrMissing = !await file.exists() || (await file.length()) == 0;
 
-    if (!exists) {
+    if (isFileCorruptOrMissing) {
+      debugPrint("--> Copying masayel.db to desktop path: $dbPath");
       try {
-        debugPrint("Copying database to: $dbPath");
-        ByteData data = await rootBundle.load(join("assets/database", "masayel.db"));
+        ByteData data = await rootBundle.load("assets/database/masayel.db");
         List<int> bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
-        await File(dbPath).writeAsBytes(bytes, flush: true);
-        debugPrint("Database successfully copied!");
+        await file.writeAsBytes(bytes, flush: true);
+        debugPrint("--> Database copied successfully! Size: ${bytes.length} bytes");
       } catch (e) {
-        debugPrint("Error copying database from assets: $e");
+        debugPrint("--> Error copying database: $e");
       }
+    } else {
+      debugPrint("--> Existing database found at: $dbPath (Size: ${await file.length()} bytes)");
     }
 
-    return await openDatabase(dbPath);
+    // 🟢 ৪. ডাটাবেজ ওপেন করা
+    if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+      return await databaseFactoryFfi.openDatabase(dbPath);
+    } else {
+      return await openDatabase(dbPath);
+    }
   }
 
   static Future<List<String>> getCategories() async {
