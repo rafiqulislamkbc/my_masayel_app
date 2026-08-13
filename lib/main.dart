@@ -14,6 +14,7 @@ import 'database_helper.dart';
 import 'firebase_options.dart';
 import 'splash_screen.dart';
 import 'masala_detail_page.dart';
+import 'amol_muhasaba_page.dart'; // 🟢 আমলের মুহাসাবা পেজ ইমপোর্ট
 
 final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.light);
 
@@ -149,7 +150,26 @@ Future<void> _navigateToMasalaDetailPage(String rawId) async {
   }
 }
 
-/// 📣 ৩. ফায়ারবেস কাস্টম ক্যাম্পেইন / জরুরি বিষয়ের ডায়ালগ
+/// 🕌 ৩. নোটিফিকেশনে ক্লিক করলে সরাসরি "AmolMuhasabaPage"-এ পাঠানোর ফাংশন (No Popup)
+Future<void> _navigateToAmolMuhasabaPage() async {
+  await Future.delayed(const Duration(milliseconds: 1500));
+
+  for (int i = 0; i < 10; i++) {
+    final context = navigatorKey.currentContext;
+    if (context != null && context.mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const AmolMuhasabaPage(),
+        ),
+      );
+      break;
+    }
+    await Future.delayed(const Duration(milliseconds: 500));
+  }
+}
+
+/// 📣 ৪. ফায়ারবেস কাস্টম ক্যাম্পেইন / জরুরি বিষয়ের ডায়ালগ
 Future<void> _showCustomNoticeDialog(String title, String body, {String? url}) async {
   await Future.delayed(const Duration(milliseconds: 2500));
 
@@ -299,11 +319,15 @@ Future<void> main() async {
     const InitializationSettings initializationSettings =
         InitializationSettings(android: initializationSettingsAndroid);
 
+    // 🟢 লোকাল নোটিফিকেশন ক্লিক হ্যান্ডলার (মাসআলা ও আমলের মুহাসাবা)
     await flutterLocalNotificationsPlugin.initialize(
       initializationSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) async {
-        if (response.payload != null && response.payload!.startsWith("MASALA:")) {
-          final idStr = response.payload!.replaceFirst("MASALA:", "");
+        final payload = response.payload;
+        if (payload == "AMOL_MUHASABA" || payload == "MUHASABA") {
+          await _navigateToAmolMuhasabaPage();
+        } else if (payload != null && payload.startsWith("MASALA:")) {
+          final idStr = payload.replaceFirst("MASALA:", "");
           await _navigateToMasalaDetailPage(idStr);
         }
       },
@@ -313,29 +337,42 @@ Future<void> main() async {
         await flutterLocalNotificationsPlugin.getNotificationAppLaunchDetails();
     if (launchDetails?.didNotificationLaunchApp ?? false) {
       final payload = launchDetails?.notificationResponse?.payload;
-      if (payload != null && payload.startsWith("MASALA:")) {
+      if (payload == "AMOL_MUHASABA" || payload == "MUHASABA") {
+        _navigateToAmolMuhasabaPage();
+      } else if (payload != null && payload.startsWith("MASALA:")) {
         final idStr = payload.replaceFirst("MASALA:", "");
         _navigateToMasalaDetailPage(idStr);
       }
     }
 
+    // 🟢 ফায়ারবেস ব্যাকগ্রাউন্ড / অ্যাপ ওপেনড ক্লিকে ফিল্টারিং (No Popup)
     FirebaseMessaging.instance.getInitialMessage().then((RemoteMessage? message) {
       if (message != null) {
+        final type = message.data['type'] ?? message.data['target'];
+        if (type == 'muhasaba' || message.data['click_action'] == 'FLUTTER_NOTIFICATION_CLICK') {
+          _navigateToAmolMuhasabaPage();
+        } else {
+          final title = message.notification?.title ?? message.data['title'] ?? 'জরুরি বিজ্ঞপ্তি';
+          final body = message.notification?.body ?? message.data['body'] ?? '';
+          final url = message.data['url'] ?? message.data['link'];
+          if (body.isNotEmpty || title.isNotEmpty) {
+            _showCustomNoticeDialog(title, body, url: url?.toString());
+          }
+        }
+      }
+    });
+
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      final type = message.data['type'] ?? message.data['target'];
+      if (type == 'muhasaba' || message.data['click_action'] == 'FLUTTER_NOTIFICATION_CLICK') {
+        _navigateToAmolMuhasabaPage();
+      } else {
         final title = message.notification?.title ?? message.data['title'] ?? 'জরুরি বিজ্ঞপ্তি';
         final body = message.notification?.body ?? message.data['body'] ?? '';
         final url = message.data['url'] ?? message.data['link'];
         if (body.isNotEmpty || title.isNotEmpty) {
           _showCustomNoticeDialog(title, body, url: url?.toString());
         }
-      }
-    });
-
-    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      final title = message.notification?.title ?? message.data['title'] ?? 'জরুরি বিজ্ঞপ্তি';
-      final body = message.notification?.body ?? message.data['body'] ?? '';
-      final url = message.data['url'] ?? message.data['link'];
-      if (body.isNotEmpty || title.isNotEmpty) {
-        _showCustomNoticeDialog(title, body, url: url?.toString());
       }
     });
 
