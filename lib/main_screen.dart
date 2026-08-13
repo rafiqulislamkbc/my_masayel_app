@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'database_helper.dart'; 
 import 'home_page.dart';
 import 'masala_detail_page.dart';
+import 'muhasaba_auth_gate.dart';
 
 class DonationPage extends StatelessWidget {
   const DonationPage({super.key});
@@ -72,10 +73,11 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
 
-  final List<Widget> _pages = [
-    const HomePage(),
-    const DonationPage(),
-  ];
+final List<Widget> _pages = [
+  const HomePage(),            // 0: হোম
+  const MuhasabaAuthGate(),    // 1: লগইন থাকলে আমল পেজ, না থাকলে লগইন পেজ দেখাবে
+  const DonationPage(),        // 3: অনুদান
+];
 
   Future<void> _openLastRead(BuildContext context) async {
     final prefs = await SharedPreferences.getInstance();

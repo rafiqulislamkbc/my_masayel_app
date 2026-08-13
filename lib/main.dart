@@ -127,7 +127,7 @@ Future<void> _navigateToMasalaDetailPage(String rawId) async {
   int? masalaId = int.tryParse(rawId);
   if (masalaId == null) return;
 
-  await Future.delayed(const Duration(milliseconds: 2500));
+  await Future.delayed(const Duration(milliseconds: 4500));
 
   for (int i = 0; i < 10; i++) {
     final context = navigatorKey.currentContext;
@@ -152,7 +152,7 @@ Future<void> _navigateToMasalaDetailPage(String rawId) async {
 
 /// 🕌 ৩. নোটিফিকেশনে ক্লিক করলে সরাসরি "AmolMuhasabaPage"-এ পাঠানোর ফাংশন (No Popup)
 Future<void> _navigateToAmolMuhasabaPage() async {
-  await Future.delayed(const Duration(milliseconds: 1500));
+  await Future.delayed(const Duration(milliseconds: 4500));
 
   for (int i = 0; i < 10; i++) {
     final context = navigatorKey.currentContext;
@@ -171,7 +171,7 @@ Future<void> _navigateToAmolMuhasabaPage() async {
 
 /// 📣 ৪. ফায়ারবেস কাস্টম ক্যাম্পেইন / জরুরি বিষয়ের ডায়ালগ
 Future<void> _showCustomNoticeDialog(String title, String body, {String? url}) async {
-  await Future.delayed(const Duration(milliseconds: 2500));
+  await Future.delayed(const Duration(milliseconds: 4500));
 
   for (int i = 0; i < 10; i++) {
     final context = navigatorKey.currentContext;
