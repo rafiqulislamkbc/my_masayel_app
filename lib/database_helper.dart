@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 class DatabaseHelper {
@@ -17,13 +18,13 @@ class DatabaseHelper {
   static Future<Database> _initDatabase() async {
     String dbPath = '';
 
-    // 🟢 ১. উইন্ডোজ/ডেক্সটপ ডাটাবেজ ইঞ্জিন ইনিশিয়ালাইজেশন
+    // 🟢 ১. প্ল্যাটফর্ম অনুযায়ী সঠিক ডাটাবেজ পাথ নির্ধারণ
     if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
       sqfliteFfiInit();
       databaseFactory = databaseFactoryFfi;
 
       final appSupportDir = await getApplicationSupportDirectory();
-      dbPath = join(appSupportDir.path, "masayel.db");
+      dbPath = join(appSupportDir.path, "masayel_v2.db");
     } else {
       var databasesPath = await getDatabasesPath();
       dbPath = join(databasesPath, "masayel.db");
@@ -35,37 +36,39 @@ class DatabaseHelper {
       await file.parent.create(recursive: true);
     }
 
-    // 🟢 ৩. ডাটাবেজ ফাইল যদি না থাকে অথবা ফাইল সাইজ ০ বাইট হয়, তবে Assets থেকে নতুন করে কপি করা
-    bool isFileCorruptOrMissing = !await file.exists() || (await file.length()) == 0;
+    // 🟢 ৩. ডাটাবেজ ফাইল যদি না থাকে তবে Assets থেকে কপি করা
+    bool isFileMissing = !await file.exists() || (await file.length()) < 1000;
 
-    if (isFileCorruptOrMissing) {
-      debugPrint("--> Copying masayel.db to desktop path: $dbPath");
+    if (isFileMissing) {
       try {
         ByteData data = await rootBundle.load("assets/database/masayel.db");
         List<int> bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
         await file.writeAsBytes(bytes, flush: true);
-        debugPrint("--> Database copied successfully! Size: ${bytes.length} bytes");
+        debugPrint("--> Assets database copied! Size: ${bytes.length} bytes");
       } catch (e) {
         debugPrint("--> Error copying database: $e");
       }
-    } else {
-      debugPrint("--> Existing database found at: $dbPath (Size: ${await file.length()} bytes)");
     }
 
-    // 🟢 ৪. ডাটাবেজ ওপেন করা
+    // 🟢 ৪. প্ল্যাটফর্ম অনুযায়ী নিরাপদভাবে ডাটাবেজ ওপেন করা (মোবাইল vs ডেক্সটপ)
     if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
       return await databaseFactoryFfi.openDatabase(dbPath);
     } else {
-      return await openDatabase(dbPath);
+      return await openDatabase(dbPath); // 👈 মোবাইলের জন্য নেটিভ openDatabase
     }
   }
 
   static Future<List<String>> getCategories() async {
-    final db = await instance;
-    final List<Map<String, dynamic>> maps = await db.rawQuery(
-      'SELECT DISTINCT category FROM masayel'
-    );
-    return List.generate(maps.length, (i) => maps[i]['category'] as String);
+    try {
+      final db = await instance;
+      final List<Map<String, dynamic>> maps = await db.rawQuery(
+        'SELECT DISTINCT category FROM masayel'
+      );
+      return List.generate(maps.length, (i) => maps[i]['category'] as String);
+    } catch (e) {
+      debugPrint("Error fetching categories: $e");
+      return [];
+    }
   }
 
   static Future<List<Map<String, dynamic>>> getMasayelByCategory(String category) async {
