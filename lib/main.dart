@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:window_manager/window_manager.dart'; // 🟢 ডেক্সটপ উইন্ডো টাইটেল কনফিগারেশন
 import 'database_helper.dart';
 import 'firebase_options.dart';
 import 'splash_screen.dart';
@@ -125,7 +126,6 @@ Future<void> _navigateToMasalaDetailPage(String rawId) async {
   int? masalaId = int.tryParse(rawId);
   if (masalaId == null) return;
 
-  // 🟢 স্প্ল্যাশ স্ক্রিন পার হয়ে হোম স্ক্রিন রেডি হওয়ার জন্য ডিলে
   await Future.delayed(const Duration(milliseconds: 2500));
 
   for (int i = 0; i < 10; i++) {
@@ -151,7 +151,6 @@ Future<void> _navigateToMasalaDetailPage(String rawId) async {
 
 /// 📣 ৩. ফায়ারবেস কাস্টম ক্যাম্পেইন / জরুরি বিষয়ের ডায়ালগ
 Future<void> _showCustomNoticeDialog(String title, String body, {String? url}) async {
-  // 🟢 স্প্ল্যাশ স্ক্রিন পার হওয়ার পর যেন ডায়ালগ ওপেন হয় (যাতে নিজ থেকে গায়েব না হয়)
   await Future.delayed(const Duration(milliseconds: 2500));
 
   for (int i = 0; i < 10; i++) {
@@ -160,7 +159,7 @@ Future<void> _showCustomNoticeDialog(String title, String body, {String? url}) a
       if (context.mounted) {
         showDialog(
           context: context,
-          barrierDismissible: false, // 🟢 বাইরে টাচ করলেও ডায়ালগ বন্ধ হবে না
+          barrierDismissible: false,
           builder: (dialogContext) => AlertDialog(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             title: Row(
@@ -257,10 +256,25 @@ Future<void> _showCustomNoticeDialog(String title, String body, {String? url}) a
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 🟢 উইন্ডোজ / ডেক্সটপের জন্য ডাটাবেজ অন
+  // 🟢 উইন্ডোজ/ডেক্সটপের ডাটাবেজ এবং বাংলা টাইটেল কনফিগারেশন
   if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
+
+    try {
+      await windowManager.ensureInitialized();
+      WindowOptions windowOptions = const WindowOptions(
+        size: Size(1280, 720),
+        center: true,
+      );
+      windowManager.waitUntilReadyToShow(windowOptions, () async {
+        await windowManager.setTitle('আপনি যা জানতে চেয়েছেন'); // 🟢 ডার্ট দিয়ে বাংলা টাইটেল সেট করা
+        await windowManager.show();
+        await windowManager.focus();
+      });
+    } catch (e) {
+      debugPrint("WindowManager init error: $e");
+    }
   }
 
   // 🟢 মোবাইল প্ল্যাটফর্ম
@@ -295,7 +309,6 @@ Future<void> main() async {
       },
     );
 
-    // 🟢 অ্যাপ সম্পূর্ণ বন্ধ থাকা অবস্থায় লোকাল নোটিফিকেশন ক্লিকে মাসআলা ডিটেইলস খোলা (Fix)
     final NotificationAppLaunchDetails? launchDetails =
         await flutterLocalNotificationsPlugin.getNotificationAppLaunchDetails();
     if (launchDetails?.didNotificationLaunchApp ?? false) {
@@ -306,7 +319,6 @@ Future<void> main() async {
       }
     }
 
-    // 🟢 ফায়ারবেস নোটিফিকেশনে ক্লিকে ডায়ালগ নোটিশ (Fix)
     FirebaseMessaging.instance.getInitialMessage().then((RemoteMessage? message) {
       if (message != null) {
         final title = message.notification?.title ?? message.data['title'] ?? 'জরুরি বিজ্ঞপ্তি';
