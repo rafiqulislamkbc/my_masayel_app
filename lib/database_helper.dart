@@ -1,7 +1,9 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:path/path.dart';
-import 'package:sqflite/sqflite.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 class DatabaseHelper {
   static Database? _database;
@@ -13,22 +15,43 @@ class DatabaseHelper {
   }
 
   static Future<Database> _initDatabase() async {
-    var databasesPath = await getDatabasesPath();
-    var path = join(databasesPath, "masayel.db");
+    String dbPath = '';
 
-    bool exists = await databaseExists(path);
+    // 🟢১. প্ল্যাটফর্ম সনাক্তকরণ ও সঠিক পাথ নির্ধারণ (উইন্ডোজ বনাম মোবাইল)
+    if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+      sqfliteFfiInit();
+      databaseFactory = databaseFactoryFfi;
+
+      final appDocDir = await getApplicationSupportDirectory();
+      dbPath = join(appDocDir.path, "masayel_app", "masayel.db");
+    } else {
+      var databasesPath = await getDatabasesPath();
+      dbPath = join(databasesPath, "masayel.db");
+    }
+
+    // 🟢২. উইন্ডোজের জন্য ডিরেক্টরি তৈরি নিশ্চিত করা
+    try {
+      await Directory(dirname(dbPath)).create(recursive: true);
+    } catch (e) {
+      debugPrint("Directory creation error: $e");
+    }
+
+    // 🟢৩. Assets থেকে masayel.db কপি করা (যদি আগে থেকে না থাকে)
+    bool exists = await databaseExists(dbPath);
 
     if (!exists) {
       try {
-        await Directory(dirname(path)).create(recursive: true);
-      } catch (_) {}
-
-      ByteData data = await rootBundle.load(join("assets/database", "masayel.db"));
-      List<int> bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
-      await File(path).writeAsBytes(bytes, flush: true);
+        debugPrint("Copying database to: $dbPath");
+        ByteData data = await rootBundle.load(join("assets/database", "masayel.db"));
+        List<int> bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+        await File(dbPath).writeAsBytes(bytes, flush: true);
+        debugPrint("Database successfully copied!");
+      } catch (e) {
+        debugPrint("Error copying database from assets: $e");
+      }
     }
 
-    return await openDatabase(path);
+    return await openDatabase(dbPath);
   }
 
   static Future<List<String>> getCategories() async {

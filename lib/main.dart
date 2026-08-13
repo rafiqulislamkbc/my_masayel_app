@@ -8,7 +8,7 @@ import 'package:workmanager/workmanager.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
-import 'package:sqflite_common_ffi/sqflite_ffi.dart'; // 🟢 উইন্ডোজ ডাটাবেজ ইমপোর্ট
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'database_helper.dart';
 import 'firebase_options.dart';
 import 'splash_screen.dart';
@@ -125,7 +125,10 @@ Future<void> _navigateToMasalaDetailPage(String rawId) async {
   int? masalaId = int.tryParse(rawId);
   if (masalaId == null) return;
 
-  for (int i = 0; i < 5; i++) {
+  // 🟢 স্প্ল্যাশ স্ক্রিন পার হয়ে হোম স্ক্রিন রেডি হওয়ার জন্য ডিলে
+  await Future.delayed(const Duration(milliseconds: 2500));
+
+  for (int i = 0; i < 10; i++) {
     final context = navigatorKey.currentContext;
     if (context != null) {
       final masalaData = await DatabaseHelper.getMasalaById(masalaId);
@@ -139,8 +142,8 @@ Future<void> _navigateToMasalaDetailPage(String rawId) async {
             ),
           ),
         );
+        break;
       }
-      break;
     }
     await Future.delayed(const Duration(milliseconds: 500));
   }
@@ -148,12 +151,16 @@ Future<void> _navigateToMasalaDetailPage(String rawId) async {
 
 /// 📣 ৩. ফায়ারবেস কাস্টম ক্যাম্পেইন / জরুরি বিষয়ের ডায়ালগ
 Future<void> _showCustomNoticeDialog(String title, String body, {String? url}) async {
-  for (int i = 0; i < 5; i++) {
+  // 🟢 স্প্ল্যাশ স্ক্রিন পার হওয়ার পর যেন ডায়ালগ ওপেন হয় (যাতে নিজ থেকে গায়েব না হয়)
+  await Future.delayed(const Duration(milliseconds: 2500));
+
+  for (int i = 0; i < 10; i++) {
     final context = navigatorKey.currentContext;
     if (context != null) {
       if (context.mounted) {
         showDialog(
           context: context,
+          barrierDismissible: false, // 🟢 বাইরে টাচ করলেও ডায়ালগ বন্ধ হবে না
           builder: (dialogContext) => AlertDialog(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             title: Row(
@@ -240,8 +247,8 @@ Future<void> _showCustomNoticeDialog(String title, String body, {String? url}) a
             ],
           ),
         );
+        break;
       }
-      break;
     }
     await Future.delayed(const Duration(milliseconds: 500));
   }
@@ -250,13 +257,13 @@ Future<void> _showCustomNoticeDialog(String title, String body, {String? url}) a
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 🟢 উইন্ডোজ / ডেক্সটপের জন্য ডাটাবেজ ইঞ্জিন অন করা
+  // 🟢 উইন্ডোজ / ডেক্সটপের জন্য ডাটাবেজ অন
   if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
   }
 
-  // 🟢 মোবাইল বনাম ডেক্সটপ গার্ড
+  // 🟢 মোবাইল প্ল্যাটফর্ম
   bool isMobile = !kIsWeb && (Platform.isAndroid || Platform.isIOS);
 
   try {
@@ -264,7 +271,7 @@ Future<void> main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
   } catch (e) {
-    debugPrint("Firebase init bypassed for desktop: $e");
+    debugPrint("Firebase init bypassed: $e");
   }
 
   if (isMobile) {
@@ -288,6 +295,18 @@ Future<void> main() async {
       },
     );
 
+    // 🟢 অ্যাপ সম্পূর্ণ বন্ধ থাকা অবস্থায় লোকাল নোটিফিকেশন ক্লিকে মাসআলা ডিটেইলস খোলা (Fix)
+    final NotificationAppLaunchDetails? launchDetails =
+        await flutterLocalNotificationsPlugin.getNotificationAppLaunchDetails();
+    if (launchDetails?.didNotificationLaunchApp ?? false) {
+      final payload = launchDetails?.notificationResponse?.payload;
+      if (payload != null && payload.startsWith("MASALA:")) {
+        final idStr = payload.replaceFirst("MASALA:", "");
+        _navigateToMasalaDetailPage(idStr);
+      }
+    }
+
+    // 🟢 ফায়ারবেস নোটিফিকেশনে ক্লিকে ডায়ালগ নোটিশ (Fix)
     FirebaseMessaging.instance.getInitialMessage().then((RemoteMessage? message) {
       if (message != null) {
         final title = message.notification?.title ?? message.data['title'] ?? 'জরুরি বিজ্ঞপ্তি';
@@ -336,7 +355,7 @@ Future<void> main() async {
         frequency: const Duration(hours: 24),
       );
 
-      await scheduleDailyMasalaNotification(hour: 15, minute: 0);
+      await scheduleDailyMasalaNotification(hour: 19, minute: 0);
     } catch (e) {
       debugPrint("Workmanager error: $e");
     }
