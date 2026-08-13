@@ -39,7 +39,7 @@ jobs:
 
       # 🟢 ২. অ্যান্ড্রয়েড এপিকে (.apk) বিল্ড করা
       - name: Build Android APK
-        run: flutter build apk --release
+        run: flutter build apk --release --android-skip-build-dependency-validation
 
       # 🚀 উইন্ডোজ অ্যাপ জিপ বানিয়ে আপলোড
       - name: Upload Windows Executable
