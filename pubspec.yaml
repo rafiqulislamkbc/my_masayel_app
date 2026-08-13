@@ -18,12 +18,13 @@ dependencies:
   firebase_messaging: ^16.5.0
   flutter_local_notifications: ^19.4.2
   workmanager: ^0.10.7
-  
+  url_launcher: ^6.3.0     # কাস্টম নোটিশের লিংক খোলার জন্য
+  timezone: ^0.10.0        # 🟢 ভার্সন আপডেট করা হয়েছে (^0.10.0)
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_launcher_icons: ^0.13.1
-  url_launcher: ^6.3.0
   flutter_lints: ^3.0.0
 
 flutter_launcher_icons:
