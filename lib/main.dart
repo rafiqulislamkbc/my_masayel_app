@@ -25,10 +25,14 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  debugPrint('Background notification received: ${message.messageId}');
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    debugPrint('Background notification received: ${message.messageId}');
+  } catch (e) {
+    debugPrint('Background notification error: $e');
+  }
 }
 
 @pragma('vm:entry-point')
@@ -288,7 +292,7 @@ Future<void> main() async {
         center: true,
       );
       windowManager.waitUntilReadyToShow(windowOptions, () async {
-        await windowManager.setTitle('আপনি যা জানতে চেয়েছেন'); // 🟢 ডার্ট দিয়ে বাংলা টাইটেল সেট করা
+        await windowManager.setTitle('আপনি যা জানতে চেয়েছেন');
         await windowManager.show();
         await windowManager.focus();
       });
@@ -300,54 +304,71 @@ Future<void> main() async {
   // 🟢 মোবাইল প্ল্যাটফর্ম
   bool isMobile = !kIsWeb && (Platform.isAndroid || Platform.isIOS);
 
+  // ফায়ারবেস ইনিট (অফলাইনে থাকলেও যেন দ্রুত টাইমআউট হয়ে অ্যাপ চলতে পারে)
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
-    );
+    ).timeout(const Duration(seconds: 3));
   } catch (e) {
-    debugPrint("Firebase init bypassed: $e");
+    debugPrint("Firebase init offline or bypassed: $e");
   }
 
   if (isMobile) {
-    FirebaseMessaging.onBackgroundMessage(
-      _firebaseMessagingBackgroundHandler,
-    );
+    try {
+      FirebaseMessaging.onBackgroundMessage(
+        _firebaseMessagingBackgroundHandler,
+      );
 
-    const AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+      const AndroidInitializationSettings initializationSettingsAndroid =
+          AndroidInitializationSettings('@mipmap/ic_launcher');
 
-    const InitializationSettings initializationSettings =
-        InitializationSettings(android: initializationSettingsAndroid);
+      const InitializationSettings initializationSettings =
+          InitializationSettings(android: initializationSettingsAndroid);
 
-    // 🟢 লোকাল নোটিফিকেশন ক্লিক হ্যান্ডলার (মাসআলা ও আমলের মুহাসাবা)
-    await flutterLocalNotificationsPlugin.initialize(
-      initializationSettings,
-      onDidReceiveNotificationResponse: (NotificationResponse response) async {
-        final payload = response.payload;
+      // 🟢 লোকাল নোটিফিকেশন ক্লিক হ্যান্ডলার (মাসআলা ও আমলের মুহাসাবা)
+      await flutterLocalNotificationsPlugin.initialize(
+        initializationSettings,
+        onDidReceiveNotificationResponse: (NotificationResponse response) async {
+          final payload = response.payload;
+          if (payload == "AMOL_MUHASABA" || payload == "MUHASABA") {
+            await _navigateToAmolMuhasabaPage();
+          } else if (payload != null && payload.startsWith("MASALA:")) {
+            final idStr = payload.replaceFirst("MASALA:", "");
+            await _navigateToMasalaDetailPage(idStr);
+          }
+        },
+      );
+
+      final NotificationAppLaunchDetails? launchDetails =
+          await flutterLocalNotificationsPlugin.getNotificationAppLaunchDetails();
+      if (launchDetails?.didNotificationLaunchApp ?? false) {
+        final payload = launchDetails?.notificationResponse?.payload;
         if (payload == "AMOL_MUHASABA" || payload == "MUHASABA") {
-          await _navigateToAmolMuhasabaPage();
+          _navigateToAmolMuhasabaPage();
         } else if (payload != null && payload.startsWith("MASALA:")) {
           final idStr = payload.replaceFirst("MASALA:", "");
-          await _navigateToMasalaDetailPage(idStr);
+          _navigateToMasalaDetailPage(idStr);
         }
-      },
-    );
-
-    final NotificationAppLaunchDetails? launchDetails =
-        await flutterLocalNotificationsPlugin.getNotificationAppLaunchDetails();
-    if (launchDetails?.didNotificationLaunchApp ?? false) {
-      final payload = launchDetails?.notificationResponse?.payload;
-      if (payload == "AMOL_MUHASABA" || payload == "MUHASABA") {
-        _navigateToAmolMuhasabaPage();
-      } else if (payload != null && payload.startsWith("MASALA:")) {
-        final idStr = payload.replaceFirst("MASALA:", "");
-        _navigateToMasalaDetailPage(idStr);
       }
-    }
 
-    // 🟢 ফায়ারবেস ব্যাকগ্রাউন্ড / অ্যাপ ওপেনড ক্লিকে ফিল্টারিং (No Popup)
-    FirebaseMessaging.instance.getInitialMessage().then((RemoteMessage? message) {
-      if (message != null) {
+      // 🟢 ফায়ারবেস ব্যাকগ্রাউন্ড / অ্যাপ ওপেনড ক্লিকে ফিল্টারিং (No Popup)
+      FirebaseMessaging.instance.getInitialMessage().then((RemoteMessage? message) {
+        if (message != null) {
+          final type = message.data['type'] ?? message.data['target'];
+          if (type == 'muhasaba' || message.data['click_action'] == 'FLUTTER_NOTIFICATION_CLICK') {
+            _navigateToAmolMuhasabaPage();
+          } else {
+            final title = message.notification?.title ?? message.data['title'] ?? 'জরুরি বিজ্ঞপ্তি';
+            final body = message.notification?.body ?? message.data['body'] ?? '';
+            final url = message.data['url'] ?? message.data['link'];
+            if (body.isNotEmpty || title.isNotEmpty) {
+              _showCustomNoticeDialog(title, body, url: url?.toString());
+            }
+          }
+        }
+      });
+
+      FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
         final type = message.data['type'] ?? message.data['target'];
         if (type == 'muhasaba' || message.data['click_action'] == 'FLUTTER_NOTIFICATION_CLICK') {
           _navigateToAmolMuhasabaPage();
@@ -359,44 +380,28 @@ Future<void> main() async {
             _showCustomNoticeDialog(title, body, url: url?.toString());
           }
         }
-      }
-    });
+      });
 
-    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      final type = message.data['type'] ?? message.data['target'];
-      if (type == 'muhasaba' || message.data['click_action'] == 'FLUTTER_NOTIFICATION_CLICK') {
-        _navigateToAmolMuhasabaPage();
-      } else {
-        final title = message.notification?.title ?? message.data['title'] ?? 'জরুরি বিজ্ঞপ্তি';
-        final body = message.notification?.body ?? message.data['body'] ?? '';
-        final url = message.data['url'] ?? message.data['link'];
-        if (body.isNotEmpty || title.isNotEmpty) {
-          _showCustomNoticeDialog(title, body, url: url?.toString());
-        }
-      }
-    });
-
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      RemoteNotification? notification = message.notification;
-      AndroidNotification? android = message.notification?.android;
-      if (notification != null && android != null) {
-        flutterLocalNotificationsPlugin.show(
-          notification.hashCode,
-          notification.title,
-          notification.body,
-          const NotificationDetails(
-            android: AndroidNotificationDetails(
-              'campaign_notice_channel',
-              'জরুরি বিজ্ঞপ্তি',
-              importance: Importance.max,
-              priority: Priority.high,
+      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        RemoteNotification? notification = message.notification;
+        AndroidNotification? android = message.notification?.android;
+        if (notification != null && android != null) {
+          flutterLocalNotificationsPlugin.show(
+            notification.hashCode,
+            notification.title,
+            notification.body,
+            const NotificationDetails(
+              android: AndroidNotificationDetails(
+                'campaign_notice_channel',
+                'জরুরি বিজ্ঞপ্তি',
+                importance: Importance.max,
+                priority: Priority.high,
+              ),
             ),
-          ),
-        );
-      }
-    });
+          );
+        }
+      });
 
-    try {
       Workmanager().initialize(callbackDispatcher);
       Workmanager().registerPeriodicTask(
         "daily_masala_unique_task",
@@ -405,24 +410,31 @@ Future<void> main() async {
       );
 
       await scheduleDailyMasalaNotification(hour: 19, minute: 0);
+
+      // 🟢 ইন্টারনেট ভিত্তিক নোটিফিকেশন টোকেন এসিনক্রোনাসলি ব্যাকগ্রাউন্ডে আনা হবে (অ্যাপ খুলতে বাধা দেবে না)
+      Future.microtask(() async {
+        try {
+          final messaging = FirebaseMessaging.instance;
+          await messaging.requestPermission(
+            alert: true,
+            badge: true,
+            sound: true,
+            provisional: false,
+          );
+          final token = await messaging.getToken().timeout(const Duration(seconds: 4));
+          debugPrint('==============================');
+          debugPrint('FCM TOKEN: $token');
+          debugPrint('==============================');
+        } catch (e) {
+          debugPrint('FCM token offline or bypassed: $e');
+        }
+      });
     } catch (e) {
-      debugPrint("Workmanager error: $e");
+      debugPrint("Setup error: $e");
     }
-
-    final messaging = FirebaseMessaging.instance;
-    await messaging.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-      provisional: false,
-    );
-
-    final token = await messaging.getToken();
-    debugPrint('==============================');
-    debugPrint('FCM TOKEN: $token');
-    debugPrint('==============================');
   }
 
+  // 🟢 সাথে সাথে অ্যাপ চালু হয়ে যাবে
   runApp(const MasayelApp());
 }
 

@@ -12,7 +12,8 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(seconds: 4), () {
+    // ৪ সেকেন্ডের বদলে ২ সেকেন্ড করা হয়েছে যাতে অফলাইনে দ্রুত ওপেন হয়
+    Future.delayed(const Duration(milliseconds: 2000), () {
       if (mounted) {
         Navigator.pushReplacement(
           context,
@@ -46,6 +47,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 'আপনি যা জানতে চেয়েছেন',
                 style: TextStyle(
                   fontSize: 20,
+                  fontWeight: FontWeight.bold,
                   color: isDarkMode ? Colors.tealAccent : const Color(0xFF006B49),
                 ),
                 textAlign: TextAlign.center,
@@ -69,7 +71,7 @@ class _SplashScreenState extends State<SplashScreen> {
                       ),
                       textAlign: TextAlign.center,
                     ),
-                    SizedBox(height: 0),
+                    SizedBox(height: 4),
                     Text(
                       'হ্যালো: ০১৮৩৩-০৭০৩২০',
                       style: TextStyle(

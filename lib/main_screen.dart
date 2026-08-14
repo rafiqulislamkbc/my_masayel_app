@@ -3,7 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'database_helper.dart'; 
 import 'home_page.dart';
 import 'masala_detail_page.dart';
-import 'amol_muhasaba_page.dart';
+import 'muhasaba_auth_gate.dart';
 
 class DonationPage extends StatelessWidget {
   const DonationPage({super.key});
@@ -79,7 +79,7 @@ class _MainScreenState extends State<MainScreen> {
   // ৪টি স্বতন্ত্র পেজের তালিকা
   final List<Widget> _pages = [
     const HomePage(),          // 0: হোম
-    const AmolMuhasabaPage(),  // 1: মুহাসাবা (লগইন চেক সহ)
+    const MuhasabaAuthGate(),  // 1: মুহাসাবা (লগইন থাকলে পেজ, না থাকলে লগইন গেট)
     const SizedBox(),          // 2: সর্বশেষ পঠিত (ডায়ালগ/পুশ পেজ)
     const DonationPage(),      // 3: অনুদান
   ];
@@ -132,7 +132,7 @@ class _MainScreenState extends State<MainScreen> {
           if (index == 0) {
             setState(() => _currentIndex = 0);
           } else if (index == 1) {
-            // মুহাসাবা পেজ
+            // মুহাসাবা পেজ (লগইন গেট সহ)
             setState(() => _currentIndex = 1);
           } else if (index == 2) {
             // সর্বশেষ পঠিত পেজে নিয়ে যাবে কিন্তু ট্যাব পরিবর্তন হবে না

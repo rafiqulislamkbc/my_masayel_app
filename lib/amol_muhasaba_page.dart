@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 String toBanglaNumber(dynamic input) {
   const Map<String, String> bnDigits = {
@@ -156,17 +158,34 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
     super.dispose();
   }
 
-  // ডিভাইসের লোকাল স্টোরেজ থেকে ডাটা লোড
   Future<void> _loadCurrentUserData() async {
+    final user = FirebaseAuth.instance.currentUser;
     final prefs = await SharedPreferences.getInstance();
     final savedDistrictId = prefs.getString('user_district_id') ?? 'dhaka';
     final todayKey = DateTime.now().toIso8601String().substring(0, 10);
 
-    final localSubmitted = prefs.getBool('sub_local_$todayKey') ?? false;
-    final localStreak = prefs.getInt('streak_local') ?? 0;
+    for (var amol in amols) {
+      amol.isCompleted = false;
+    }
+
+    if (user == null) {
+      if (mounted) {
+        setState(() {
+          _isSubmittedToday = false;
+          userStreakDays = 0;
+        });
+      }
+      return;
+    }
+
+    final uid = user.uid;
+    final localSubmitted = prefs.getBool('sub_${uid}_$todayKey') ?? false;
+    final localStreak = prefs.getInt('streak_$uid') ?? 0;
 
     for (var amol in amols) {
-      amol.isCompleted = prefs.getBool('amol_local_${todayKey}_${amol.id}') ?? false;
+      if (prefs.containsKey('amol_${uid}_${todayKey}_${amol.id}')) {
+        amol.isCompleted = prefs.getBool('amol_${uid}_${todayKey}_${amol.id}') ?? false;
+      }
     }
 
     if (mounted) {
@@ -179,26 +198,93 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
         );
       });
     }
+
+    // ফায়ারস্টোর থেকে সরাসরি ক্লাউড ডাটা সিঙ্ক
+    try {
+      final recordsRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .collection('muhasaba_records');
+
+      final countSnap = await recordsRef.get();
+      final totalDays = countSnap.docs.length;
+      final todaySnap = await recordsRef.doc(todayKey).get();
+
+      if (todaySnap.exists && todaySnap.data() != null) {
+        final data = todaySnap.data()!;
+        final Map<String, dynamic>? tasks = data['tasks'];
+        if (tasks != null) {
+          for (var amol in amols) {
+            if (tasks.containsKey(amol.id)) {
+              amol.isCompleted = tasks[amol.id] == true;
+            }
+          }
+        }
+        _isSubmittedToday = data['isSubmitted'] ?? true;
+      }
+
+      if (mounted) {
+        setState(() {
+          if (totalDays > userStreakDays) {
+            userStreakDays = totalDays;
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint('Firestore Fetch Error: $e');
+    }
   }
 
-  // বাটন ক্লিকে ডাটা সেভ
   Future<void> _submitTodayAmol() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('অনুগ্রহ করে প্রথমে লগইন করুন')),
+      );
+      return;
+    }
+
     setState(() => _isSaving = true);
 
+    final uid = user.uid;
     final dateKey = DateTime.now().toIso8601String().substring(0, 10);
+    final Map<String, bool> taskMap = {
+      for (var item in amols) item.id: item.isCompleted
+    };
+
     final completedCount = amols.where((a) => a.isCompleted).length;
     final totalCount = amols.length;
 
     try {
+      await FirebaseFirestore.instance.collection('users').doc(uid).set({
+        'uid': uid,
+        'email': user.email ?? '',
+        'name': user.displayName ?? 'মুসলিম সাথী',
+        'lastActive': dateKey,
+        'lastSubmitTime': DateTime.now().toIso8601String(),
+      }, SetOptions(merge: true));
+
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .collection('muhasaba_records')
+          .doc(dateKey)
+          .set({
+        'date': dateKey,
+        'tasks': taskMap,
+        'completedCount': completedCount,
+        'totalCount': totalCount,
+        'isSubmitted': true,
+        'submittedAt': DateTime.now().toIso8601String(),
+      }, SetOptions(merge: true));
+
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('sub_local_$dateKey', true);
-
-      for (var item in amols) {
-        await prefs.setBool('amol_local_${dateKey}_${item.id}', item.isCompleted);
+      await prefs.setBool('sub_${uid}_$dateKey', true);
+      for (var entry in taskMap.entries) {
+        await prefs.setBool('amol_${uid}_${dateKey}_${entry.key}', entry.value);
       }
-
       final newStreak = userStreakDays + 1;
-      await prefs.setInt('streak_local', newStreak);
+      await prefs.setInt('streak_$uid', newStreak);
 
       if (mounted) {
         setState(() {
@@ -207,7 +293,6 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
           _isSaving = false;
         });
 
-        // পপআপ ডায়ালগ
         if (completedCount == totalCount) {
           _showCelebrationDialog();
         } else {
@@ -218,6 +303,12 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
       debugPrint('সেভ এরর: $e');
       if (mounted) {
         setState(() => _isSaving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('সেভ করতে সমস্যা: $e'),
+            backgroundColor: Colors.red.shade800,
+          ),
+        );
       }
     }
   }
@@ -438,215 +529,312 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
         ? amols
         : amols.where((a) => a.category == selectedFilter).toList();
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF6F8F7),
-      appBar: AppBar(
-        backgroundColor: Colors.teal,
-        foregroundColor: Colors.white,
-        elevation: 1,
-        centerTitle: true,
-        title: const Text('আমলের মুহাসাবা', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+    final user = FirebaseAuth.instance.currentUser;
+
+    // ডিফল্ট লাইট মোড নিশ্চিত করার জন্য Theme মোড লাইট ধরে ভিউ তৈরি
+    return Theme(
+      data: ThemeData.light().copyWith(
+        primaryColor: Colors.teal,
+        scaffoldBackgroundColor: const Color(0xFFF6F8F7),
+        colorScheme: const ColorScheme.light(primary: Colors.teal),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(18),
-                boxShadow: const [
-                  BoxShadow(color: Color(0x0A000000), blurRadius: 10, offset: Offset(0, 3)),
-                ],
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      InkWell(
-                        onTap: _openDistrictPicker,
-                        borderRadius: BorderRadius.circular(10),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Colors.teal.shade50,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: Colors.teal.shade200),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.location_on, color: Colors.teal, size: 16),
-                              const SizedBox(width: 4),
-                              Text(
-                                '${selectedDistrict.nameBn} জেলা',
-                                style: const TextStyle(color: Colors.teal, fontWeight: FontWeight.bold, fontSize: 13),
-                              ),
-                              const Icon(Icons.arrow_drop_down, color: Colors.teal, size: 18),
-                            ],
-                          ),
-                        ),
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF6F8F7),
+        appBar: AppBar(
+          backgroundColor: Colors.teal,
+          foregroundColor: Colors.white,
+          elevation: 1,
+          centerTitle: true,
+          title: const Text('আমলের মুহাসাবা', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          actions: [
+            IconButton(
+              tooltip: 'লগআউট',
+              icon: const Icon(Icons.logout_rounded),
+              onPressed: () async {
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    title: const Text('লগআউট নিশ্চিতকরণ', style: TextStyle(fontWeight: FontWeight.bold)),
+                    content: const Text('আপনি কি আপনার অ্যাকাউন্ট থেকে লগআউট করতে চান?'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: const Text('না', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
                       ),
-                      Text(
-                        'আজ: ${toBanglaNumber(DateTime.now().day)} তারিখ',
-                        style: const TextStyle(color: Colors.black54, fontSize: 12),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.teal,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        onPressed: () => Navigator.pop(context, true),
+                        child: const Text('লগআউট'),
                       ),
                     ],
-                  ),
-                  const Divider(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('চলমান ওয়াক্ত: $currentWaqt', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                          const SizedBox(height: 2),
-                          const Text('ওয়াক্ত শেষ হতে সময় বাকি:', style: TextStyle(color: Colors.black54, fontSize: 11)),
-                        ],
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Colors.teal.shade50,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.teal.shade200),
-                        ),
-                        child: Text(
-                          remainingFormatted,
-                          style: const TextStyle(color: Colors.teal, fontWeight: FontWeight.bold, fontSize: 12),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [Color(0xFF007A5E), Color(0xFF005A45)]),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Column(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFBBF24),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Text(
-                      toBanglaNumber(userStreakDays),
-                      style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '${toBanglaNumber(userStreakDays)} দিনের মুহাসাবা জমা হয়েছে',
-                    style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'আজকের টিক দেওয়া আমল: ${toBanglaNumber(completedCount)}/${toBanglaNumber(totalCount)} (${toBanglaNumber(percentage)}%)',
-                    style: const TextStyle(color: Colors.white70, fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('আজকের আমল তালিকা', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                Row(
-                  children: [
-                    _filterChip('all', 'সব'),
-                    const SizedBox(width: 4),
-                    _filterChip('farz', 'নামাজ'),
-                    const SizedBox(width: 4),
-                    _filterChip('nafl_zikr', 'নফল/জিকির'),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-
-            ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: filteredAmols.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
-              itemBuilder: (context, index) {
-                final amol = filteredAmols[index];
-                return Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: amol.isCompleted ? Colors.teal : Colors.grey.shade200,
-                      width: amol.isCompleted ? 1.5 : 1,
-                    ),
-                  ),
-                  child: CheckboxListTile(
-                    activeColor: Colors.teal,
-                    value: amol.isCompleted,
-                    onChanged: _isSubmittedToday
-                        ? null
-                        : (val) {
-                            setState(() {
-                              amol.isCompleted = val ?? false;
-                            });
-                          },
-                    title: Text(
-                      amol.title,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                        color: amol.isCompleted ? Colors.teal.shade900 : Colors.black87,
-                      ),
-                    ),
-                    subtitle: Text(amol.subtitle, style: const TextStyle(fontSize: 12, color: Colors.black54)),
-                    secondary: amol.category == 'nafl_zikr'
-                        ? Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(color: Colors.amber.shade50, borderRadius: BorderRadius.circular(6)),
-                            child: const Text('নফল', style: TextStyle(fontSize: 10, color: Colors.orange, fontWeight: FontWeight.bold)),
-                          )
-                        : null,
                   ),
                 );
+
+                if (confirm == true) {
+                  await FirebaseAuth.instance.signOut();
+                }
               },
             ),
-            const SizedBox(height: 20),
-
-            SizedBox(
-              height: 50,
-              child: ElevatedButton.icon(
-                onPressed: (_isSubmittedToday || _isSaving) ? null : _submitTodayAmol,
-                icon: _isSaving
-                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                    : Icon(_isSubmittedToday ? Icons.lock : Icons.check_circle),
-                label: Text(
-                  _isSubmittedToday
-                      ? 'আজকের আমল ইতোমধ্যে জমা দেওয়া হয়েছে'
-                      : 'আজকের আমল জমা দিন',
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+          ],
+        ),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (user != null)
+                Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.teal.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.account_circle, color: Colors.teal, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'ব্যবহারকারী: ${user.displayName ?? user.email ?? "মুসলিম সাথী"}',
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black87),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const Icon(Icons.cloud_done, color: Colors.teal, size: 18),
+                    ],
+                  ),
                 ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _isSubmittedToday ? Colors.grey.shade400 : Colors.teal,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+
+              // 🟢 টাইমার ও জেলা সিলেকশন সেকশন (হালকা ব্যাকগ্রাউন্ড কালার)
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0FDF4), // হালকা নান্দনিক গ্রিন-মিন্ট ব্যাকগ্রাউন্ড
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: Colors.teal.shade100, width: 1.2),
+                  boxShadow: const [
+                    BoxShadow(color: Color(0x0A000000), blurRadius: 10, offset: Offset(0, 3)),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        InkWell(
+                          onTap: _openDistrictPicker,
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: Colors.teal.shade300),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.location_on, color: Colors.teal, size: 16),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${selectedDistrict.nameBn} জেলা',
+                                  style: const TextStyle(color: Colors.teal, fontWeight: FontWeight.bold, fontSize: 13),
+                                ),
+                                const Icon(Icons.arrow_drop_down, color: Colors.teal, size: 18),
+                              ],
+                            ),
+                          ),
+                        ),
+                        Text(
+                          'আজ: ${toBanglaNumber(DateTime.now().day)} তারিখ',
+                          style: const TextStyle(color: Colors.black54, fontSize: 12, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                    const Divider(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('চলমান ওয়াক্ত: $currentWaqt', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87)),
+                            const SizedBox(height: 2),
+                            const Text('ওয়াক্ত শেষ হতে সময় বাকি:', style: TextStyle(color: Colors.black54, fontSize: 11)),
+                          ],
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.teal.shade600,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            remainingFormatted,
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-            ),
-            const SizedBox(height: 24),
-          ],
+              const SizedBox(height: 14),
+
+              // স্ট্রিক ব্যানার
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: [Color(0xFF007A5E), Color(0xFF005A45)]),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFBBF24),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Text(
+                        toBanglaNumber(userStreakDays),
+                        style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '${toBanglaNumber(userStreakDays)} দিনের মুহাসাবা জমা হয়েছে',
+                      style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'আজকের টিক দেওয়া আমল: ${toBanglaNumber(completedCount)}/${toBanglaNumber(totalCount)} (${toBanglaNumber(percentage)}%)',
+                      style: const TextStyle(color: Colors.white70, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('আজকের আমল তালিকা', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
+                  Row(
+                    children: [
+                      _filterChip('all', 'সব'),
+                      const SizedBox(width: 4),
+                      _filterChip('farz', 'নামাজ'),
+                      const SizedBox(width: 4),
+                      _filterChip('nafl_zikr', 'নফল/জিকির'),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+
+              // 🟢 আমল কার্ড তালিকা (সাধারণত সাদা, টিক দিলে চমৎকার সবুজ ব্যাকগ্রাউন্ড)
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: filteredAmols.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 8),
+                itemBuilder: (context, index) {
+                  final amol = filteredAmols[index];
+                  final isDone = amol.isCompleted;
+
+                  return Container(
+                    decoration: BoxDecoration(
+                      // টিক দিলে হালকা সবুজ (0xFFE8F5E9 / green.shade50), না দিলে সাদা
+                      color: isDone ? const Color(0xFFE8F5E9) : Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: isDone ? Colors.teal.shade700 : Colors.grey.shade200,
+                        width: isDone ? 1.6 : 1,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: isDone ? Colors.teal.withOpacity(0.06) : Colors.black.withOpacity(0.02),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: CheckboxListTile(
+                      activeColor: Colors.teal.shade700,
+                      checkColor: Colors.white,
+                      value: amol.isCompleted,
+                      onChanged: _isSubmittedToday
+                          ? null
+                          : (val) {
+                              setState(() {
+                                amol.isCompleted = val ?? false;
+                              });
+                            },
+                      title: Text(
+                        amol.title,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          color: isDone ? const Color(0xFF004D40) : Colors.black87,
+                        ),
+                      ),
+                      subtitle: Text(
+                        amol.subtitle,
+                        style: TextStyle(fontSize: 12, color: isDone ? Colors.black54 : Colors.grey.shade600),
+                      ),
+                      secondary: amol.category == 'nafl_zikr'
+                          ? Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: isDone ? Colors.teal.shade100 : Colors.amber.shade50,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                'নফল',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: isDone ? Colors.teal.shade900 : Colors.orange,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            )
+                          : null,
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 20),
+
+              SizedBox(
+                height: 50,
+                child: ElevatedButton.icon(
+                  onPressed: (_isSubmittedToday || _isSaving) ? null : _submitTodayAmol,
+                  icon: _isSaving
+                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : Icon(_isSubmittedToday ? Icons.lock : Icons.cloud_upload),
+                  label: Text(
+                    _isSubmittedToday
+                        ? 'আজকের আমল ইতোমধ্যে জমা দেওয়া হয়েছে'
+                        : 'আজকের আমল জমা দিন',
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _isSubmittedToday ? Colors.grey.shade400 : Colors.teal,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+            ],
+          ),
         ),
       ),
     );
