@@ -15,6 +15,8 @@ class DonationPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('অনুদান ও সহযোগিতা'),
+        backgroundColor: Colors.teal,
+        foregroundColor: Colors.white,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -64,24 +66,32 @@ class DonationPage extends StatelessWidget {
 }
 
 class MainScreen extends StatefulWidget {
-  const MainScreen({super.key});
+  final int initialIndex;
+  const MainScreen({super.key, this.initialIndex = 0});
 
   @override
   State<MainScreen> createState() => _MainScreenState();
 }
 
 class _MainScreenState extends State<MainScreen> {
-  int _currentIndex = 0;
+  late int _currentIndex;
 
-final List<Widget> _pages = [
-  const HomePage(),            // 0: হোম
-  const MuhasabaAuthGate(),    // 1: লগইন থাকলে আমল পেজ, না থাকলে লগইন পেজ দেখাবে
-  const DonationPage(),        // 3: অনুদান
-];
+  // ৪টি স্বতন্ত্র পেজের তালিকা
+  final List<Widget> _pages = [
+    const HomePage(),          // 0: হোম
+    const MuhasabaAuthGate(),  // 1: মুহাসাবা (লগইন চেক সহ)
+    const SizedBox(),          // 2: সর্বশেষ পঠিত (ডায়ালগ/পুশ পেজ)
+    const DonationPage(),      // 3: অনুদান
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+  }
 
   Future<void> _openLastRead(BuildContext context) async {
     final prefs = await SharedPreferences.getInstance();
-    
     final int? lastId = prefs.getInt('last_masala_id');
 
     if (lastId != null) {
@@ -111,36 +121,49 @@ final List<Widget> _pages = [
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _pages[_currentIndex == 2 ? 1 : _currentIndex],
+      body: _currentIndex == 0
+          ? _pages[0]
+          : _currentIndex == 1
+              ? _pages[1]
+              : _pages[3], // ৩ হলে অনুদান পেজ
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) async {
           if (index == 0) {
-            setState(() {
-              _currentIndex = 0;
-            });
+            setState(() => _currentIndex = 0);
           } else if (index == 1) {
-            await _openLastRead(context);
+            // মুহাসাবা পেজ
+            setState(() => _currentIndex = 1);
           } else if (index == 2) {
-            setState(() {
-              _currentIndex = 2;
-            });
+            // সর্বশেষ পঠিত পেজে নিয়ে যাবে কিন্তু ট্যাব পরিবর্তন হবে না
+            await _openLastRead(context);
+          } else if (index == 3) {
+            // অনুদান পেজ
+            setState(() => _currentIndex = 3);
           }
         },
         type: BottomNavigationBarType.fixed,
         selectedItemColor: Colors.teal,
         unselectedItemColor: Colors.grey,
+        selectedFontSize: 12,
+        unselectedFontSize: 11,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home),
             label: 'হোম',
           ),
           BottomNavigationBarItem(
+            icon: Icon(Icons.fact_check_outlined),
+            activeIcon: Icon(Icons.fact_check),
+            label: 'মুহাসাবা',
+          ),
+          BottomNavigationBarItem(
             icon: Icon(Icons.history),
             label: 'সর্বশেষ পঠিত',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.volunteer_activism),
+            icon: Icon(Icons.volunteer_activism_outlined),
+            activeIcon: Icon(Icons.volunteer_activism),
             label: 'অনুদান',
           ),
         ],

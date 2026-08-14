@@ -2,10 +2,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'auth_service.dart';
 
-/// ---------------------------------------------------------------------------
-/// মডেল ও বাংলা সংখ্যা কনভার্টার
-/// ---------------------------------------------------------------------------
 String toBanglaNumber(dynamic input) {
   const Map<String, String> bnDigits = {
     '0': '০', '1': '১', '2': '২', '3': '৩', '4': '৪',
@@ -28,7 +28,6 @@ class DistrictData {
   });
 }
 
-// বাংলাদেশের ৬৪ জেলার তালিকা
 const List<DistrictData> all64Districts = [
   DistrictData(id: 'dhaka', nameBn: 'ঢাকা', division: 'ঢাকা', offsetMinutes: 0),
   DistrictData(id: 'gazipur', nameBn: 'গাজীপুর', division: 'ঢাকা', offsetMinutes: 0),
@@ -120,7 +119,11 @@ class AmolMuhasabaPage extends StatefulWidget {
 }
 
 class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
-  int userStreakDays = 5;
+  User? _currentUser;
+  int userStreakDays = 0;
+  bool _isSubmittedToday = false;
+  bool _isSaving = false;
+
   DistrictData selectedDistrict = all64Districts[0];
   String selectedFilter = 'all';
 
@@ -130,23 +133,24 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
   String remainingDigital = '০৪:৩৪:০০';
 
   final List<AmolItem> amols = [
-    AmolItem(id: 'fajr', title: 'ফজর', subtitle: '২ রাকাত সুন্নাত ও ২ রাকাত ফরজ', category: 'farz', isCompleted: true),
-    AmolItem(id: 'dhuhr', title: 'যোহর', subtitle: '৪ রাকাত ফরজ ও সুন্নাত সালাত', category: 'farz', isCompleted: true),
-    AmolItem(id: 'asr', title: 'আসর', subtitle: '৪ রাকাত ফরজ সালাত', category: 'farz', isCompleted: true),
-    AmolItem(id: 'maghrib', title: 'মাগরিব', subtitle: '৩ রাকাত ফরজ ও ২ রাকাত সুন্নাত', category: 'farz', isCompleted: true),
-    AmolItem(id: 'isha', title: 'এশা', subtitle: '৪ রাকাত ফরজ ও বিতর সালাত', category: 'farz', isCompleted: true),
-    AmolItem(id: 'quran', title: 'কুরআন তিলাওয়াত', subtitle: 'কমপক্ষে ১০ আয়াত বা অর্থসহ ১ রুকু', category: 'nafl_zikr', isCompleted: true),
-    AmolItem(id: 'chasht', title: 'চাশত সালাত (সালাতুদ দুহা)', subtitle: 'সূর্য ওঠার পর ২ থেকে ৪ রাকাত সালাত', category: 'nafl_zikr', isCompleted: true),
-    AmolItem(id: 'awwabin', title: 'আওয়াবিন সালাত', subtitle: 'মাগরিবের পর ৬ রাকাত নফল সালাত', category: 'nafl_zikr', isCompleted: false),
-    AmolItem(id: 'durood', title: 'দরুদ শরীফ (কমপক্ষে ১০০ বার)', subtitle: 'রাসূলুল্লাহ (ﷺ)-এর ওপর ১০০ বার দরুদ পাঠ', category: 'nafl_zikr', isCompleted: true),
-    AmolItem(id: 'istighfar', title: 'ইস্তিগফার ও জিকির (১০০ বার)', subtitle: 'সকাল ও সন্ধ্যার মাসনুন জিকির', category: 'nafl_zikr', isCompleted: false),
-    AmolItem(id: 'tahajjud', title: 'তাহাজ্জুদ সালাত', subtitle: 'রাতের শেষ তৃতীয়াংশে বিশেষ ইবাদত', category: 'nafl_zikr', isCompleted: false),
+    AmolItem(id: 'fajr', title: 'ফজর', subtitle: '২ রাকাত সুন্নাত ও ২ রাকাত ফরজ', category: 'farz'),
+    AmolItem(id: 'dhuhr', title: 'যোহর', subtitle: '৪ রাকাত ফরজ ও সুন্নাত সালাত', category: 'farz'),
+    AmolItem(id: 'asr', title: 'আসর', subtitle: '৪ রাকাত ফরজ সালাত', category: 'farz'),
+    AmolItem(id: 'maghrib', title: 'মাগরিব', subtitle: '৩ রাকাত ফরজ ও ২ রাকাত সুন্নাত', category: 'farz'),
+    AmolItem(id: 'isha', title: 'এশা', subtitle: '৪ রাকাত ফরজ ও বিতর সালাত', category: 'farz'),
+    AmolItem(id: 'quran', title: 'কুরআন তিলাওয়াত', subtitle: 'কমপক্ষে ১০ আয়াত বা অর্থসহ ১ রুকু', category: 'nafl_zikr'),
+    AmolItem(id: 'chasht', title: 'চাশত সালাত (সালাতুদ দুহা)', subtitle: 'সূর্য ওঠার পর ২ থেকে ৪ রাকাত সালাত', category: 'nafl_zikr'),
+    AmolItem(id: 'awwabin', title: 'আওয়াবিন সালাত', subtitle: 'মাগরিবের পর ৬ রাকাত নফল সালাত', category: 'nafl_zikr'),
+    AmolItem(id: 'durood', title: 'দরুদ শরীফ (কমপক্ষে ১০০ বার)', subtitle: 'রাসূলুল্লাহ (ﷺ)-এর ওপর ১০০ বার দরুদ পাঠ', category: 'nafl_zikr'),
+    AmolItem(id: 'istighfar', title: 'ইস্তিগফার ও জিকির (১০০ বার)', subtitle: 'সকাল ও সন্ধ্যার মাসনুন জিকির', category: 'nafl_zikr'),
+    AmolItem(id: 'tahajjud', title: 'তাহাজ্জুদ সালাত', subtitle: 'রাতের শেষ তৃতীয়াংশে বিশেষ ইবাদত', category: 'nafl_zikr'),
   ];
 
   @override
   void initState() {
     super.initState();
-    _loadUserPreferences();
+    _currentUser = FirebaseAuth.instance.currentUser;
+    _loadUserPreferencesAndCloudData();
     _updatePrayerTime();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) => _updatePrayerTime());
   }
@@ -157,20 +161,54 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
     super.dispose();
   }
 
-  Future<void> _loadUserPreferences() async {
+  Future<void> _loadUserPreferencesAndCloudData() async {
     final prefs = await SharedPreferences.getInstance();
     final savedDistrictId = prefs.getString('user_district_id') ?? 'dhaka';
-    final savedStreak = prefs.getInt('user_streak_days') ?? 5;
 
-    for (var amol in amols) {
-      if (prefs.containsKey('amol_${amol.id}')) {
-        amol.isCompleted = prefs.getBool('amol_${amol.id}') ?? false;
+    if (_currentUser != null) {
+      try {
+        final dateKey = DateTime.now().toIso8601String().substring(0, 10);
+        
+        final countSnapshot = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(_currentUser!.uid)
+            .collection('muhasaba_records')
+            .get();
+
+        final totalSubmittedDays = countSnapshot.docs.length;
+
+        final todayDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(_currentUser!.uid)
+            .collection('muhasaba_records')
+            .doc(dateKey)
+            .get();
+
+        if (todayDoc.exists && todayDoc.data() != null) {
+          final data = todayDoc.data()!;
+          final Map<String, dynamic>? tasks = data['tasks'];
+          if (tasks != null) {
+            for (var amol in amols) {
+              if (tasks.containsKey(amol.id)) {
+                amol.isCompleted = tasks[amol.id] == true;
+              }
+            }
+          }
+          _isSubmittedToday = data['isSubmitted'] ?? true;
+        }
+
+        if (mounted) {
+          setState(() {
+            userStreakDays = totalSubmittedDays;
+          });
+        }
+      } catch (e) {
+        debugPrint('Firestore Load Error: $e');
       }
     }
 
     if (mounted) {
       setState(() {
-        userStreakDays = savedStreak;
         selectedDistrict = all64Districts.firstWhere(
           (d) => d.id == savedDistrictId,
           orElse: () => all64Districts[0],
@@ -179,20 +217,94 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
     }
   }
 
-  Future<void> _saveAmolState(String id, bool val) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('amol_$id', val);
+  Future<void> _submitTodayAmol() async {
+    if (_currentUser == null) return;
+
+    setState(() => _isSaving = true);
+    try {
+      final dateKey = DateTime.now().toIso8601String().substring(0, 10);
+      final Map<String, bool> taskMap = {
+        for (var item in amols) item.id: item.isCompleted
+      };
+
+      final completedCount = amols.where((a) => a.isCompleted).length;
+      final totalCount = amols.length;
+
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_currentUser!.uid)
+          .collection('muhasaba_records')
+          .doc(dateKey)
+          .set({
+        'date': dateKey,
+        'tasks': taskMap,
+        'completedCount': completedCount,
+        'totalCount': totalCount,
+        'isSubmitted': true,
+        'submittedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      setState(() {
+        _isSubmittedToday = true;
+        userStreakDays += 1;
+      });
+
+      if (completedCount == totalCount) {
+        _showCelebrationDialog();
+      } else {
+        _showStandardThankYouDialog(completedCount, totalCount);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('ডাটা সেভ করতে ব্যর্থ: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 
-  Future<void> _saveDistrict(DistrictData district) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('user_district_id', district.id);
-    if (mounted) {
-      setState(() {
-        selectedDistrict = district;
-      });
-    }
-    _updatePrayerTime();
+  void _showStandardThankYouDialog(int done, int total) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: Colors.white,
+        title: const Row(
+          children: [
+            Icon(Icons.check_circle_outline, color: Colors.teal, size: 28),
+            SizedBox(width: 8),
+            Text('আমল জমা হয়েছে', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.teal)),
+          ],
+        ),
+        content: Text(
+          'আলহামদুলিল্লাহ! আজকের দিনের ${toBanglaNumber(done)}টি আমল সফলভাবে ফায়ারবেস ক্লাউডে সংরক্ষিত হয়েছে। বাকি আমলগুলোও যথাসময়ে আদায় করার তাওফিক দান করুন।',
+          style: const TextStyle(fontSize: 14, color: Colors.black87),
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.teal,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('ঠিক আছে'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ⭐ রঙিন কনফেটি রেইন সহ স্পেশাল মোবারকবাদ ডায়ালগ
+  void _showCelebrationDialog() {
+    HapticFeedback.heavyImpact();
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => const CelebrationConfettiDialog(),
+    );
   }
 
   void _updatePrayerTime() {
@@ -260,103 +372,12 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
     }
   }
 
-  void _triggerCelebration() {
-    HapticFeedback.heavyImpact();
-    showDialog(
-      context: context,
-      barrierDismissible: true,
-      builder: (context) {
-        return Dialog(
-          backgroundColor: Colors.transparent,
-          insetPadding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF0F172A), Color(0xFF064E3B), Color(0xFF0F172A)],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
-              borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: const Color(0xFFFBBF24), width: 2),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 70,
-                  height: 70,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFFBBF24),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.emoji_events, color: Color(0xFF064E3B), size: 40),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'মাশাআল্লাহ! ১০০% আমল সম্পন্ন',
-                  style: TextStyle(
-                    color: Color(0xFFFDE68A),
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                const Text(
-                  'আজকের দিনের সকল আমল সফলভাবে সম্পন্ন হয়েছে!',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white70, fontSize: 13),
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: Colors.black38,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0x6610B981)),
-                  ),
-                  child: const Column(
-                    children: [
-                      Text(
-                        'تَقَبَّلَ اللَّهُ مِنَّا وَمِنْكُم صَالِحَ الأَعْمَال',
-                        style: TextStyle(color: Color(0xFF6EE7B7), fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        '"আল্লাহ তায়ালা আমাদের ও আপনার সকল নেক আমল কবুল করুন।"',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.white60, fontSize: 11, fontStyle: FontStyle.italic),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF10B981),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
-                  ),
-                  child: const Text(
-                    'আলহামদুলিল্লাহ',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   void _openDistrictPicker() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF0E131F),
+      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       isScrollControlled: true,
       builder: (context) {
@@ -381,7 +402,7 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
                         width: 40,
                         height: 4,
                         decoration: BoxDecoration(
-                          color: Colors.white24,
+                          color: Colors.grey.shade300,
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),
@@ -389,7 +410,7 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
                       const Text(
                         'আপনার জেলা নির্বাচন করুন (৬৪ জেলা)',
                         style: TextStyle(
-                          color: Color(0xFF6EE7B7),
+                          color: Colors.teal,
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
@@ -397,13 +418,11 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
                       const SizedBox(height: 12),
                       TextField(
                         onChanged: (val) => setModalState(() => searchQuery = val),
-                        style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
                           hintText: 'জেলার নাম খুঁজুন...',
-                          hintStyle: const TextStyle(color: Colors.white38),
-                          prefixIcon: const Icon(Icons.search, color: Color(0xFF10B981)),
+                          prefixIcon: const Icon(Icons.search, color: Colors.teal),
                           filled: true,
-                          fillColor: const Color(0xFF1A2234),
+                          fillColor: Colors.grey.shade100,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),
                             borderSide: BorderSide.none,
@@ -425,28 +444,18 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
                                     : '-${toBanglaNumber(dist.offsetMinutes.abs())} মিনিট');
 
                             return ListTile(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              tileColor: isSelected ? const Color(0xFF007A5E) : Colors.transparent,
-                              leading: const Icon(Icons.location_on, color: Color(0xFF10B981)),
-                              title: Text(
-                                dist.nameBn,
-                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                              ),
-                              subtitle: Text(
-                                '${dist.division} বিভাগ • $offsetStr',
-                                style: TextStyle(
-                                  color: isSelected ? Colors.white70 : Colors.white38,
-                                  fontSize: 12,
-                                ),
-                              ),
-                              trailing: isSelected
-                                  ? const Icon(Icons.check_circle, color: Color(0xFFFBBF24))
-                                  : null,
-                              onTap: () {
-                                _saveDistrict(dist);
-                                Navigator.pop(context);
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              tileColor: isSelected ? Colors.teal.shade50 : Colors.transparent,
+                              leading: const Icon(Icons.location_on, color: Colors.teal),
+                              title: Text(dist.nameBn, style: const TextStyle(fontWeight: FontWeight.bold)),
+                              subtitle: Text('${dist.division} বিভাগ • $offsetStr', style: const TextStyle(fontSize: 12)),
+                              trailing: isSelected ? const Icon(Icons.check_circle, color: Colors.teal) : null,
+                              onTap: () async {
+                                final prefs = await SharedPreferences.getInstance();
+                                await prefs.setString('user_district_id', dist.id);
+                                setState(() => selectedDistrict = dist);
+                                _updatePrayerTime();
+                                if (context.mounted) Navigator.pop(context);
                               },
                             );
                           },
@@ -474,36 +483,79 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
         : amols.where((a) => a.category == selectedFilter).toList();
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0E131F),
+      backgroundColor: const Color(0xFFF6F8F7),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0E131F),
-        elevation: 0,
+        backgroundColor: Colors.teal,
+        foregroundColor: Colors.white,
+        elevation: 1,
         centerTitle: true,
-        title: const Text(
-          'আমলের মুহাসাবা',
-          style: TextStyle(
-            color: Color(0xFF6EE7B7),
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
+        title: const Text('আমলের মুহাসাবা', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        actions: [
+          IconButton(
+            tooltip: 'লগআউট',
+            icon: const Icon(Icons.logout),
+            onPressed: () async {
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('লগআউট নিশ্চিতকরণ'),
+                  content: const Text('আপনি কি আপনার অ্যাকাউন্ট থেকে লগআউট করতে চান?'),
+                  actions: [
+                    TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('না')),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.teal, foregroundColor: Colors.white),
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text('লগআউট'),
+                    ),
+                  ],
+                ),
+              );
+
+              if (confirm == true) {
+                await AuthService.signOut();
+              }
+            },
           ),
-        ),
+        ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // ১. শীর্ষ কার্ড: জেলা ও লাইভ ওয়াক্ত
+            if (_currentUser != null)
+              Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.teal.shade200),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.account_circle, color: Colors.teal, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'ব্যবহারকারী: ${_currentUser?.displayName ?? _currentUser?.email ?? "মুসলিম ভাই"}',
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black87),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const Icon(Icons.cloud_done, color: Colors.teal, size: 18),
+                  ],
+                ),
+              ),
+
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF062D24), Color(0xFF0F172A)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(22),
-                border: Border.all(color: const Color(0x5910B981)),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 3)),
+                ],
               ),
               child: Column(
                 children: [
@@ -512,298 +564,184 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
                     children: [
                       InkWell(
                         onTap: _openDistrictPicker,
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(10),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                           decoration: BoxDecoration(
-                            color: const Color(0x2610B981),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0x6610B981)),
+                            color: Colors.teal.shade50,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: Colors.teal.shade200),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.location_on, color: Color(0xFF10B981), size: 16),
+                              const Icon(Icons.location_on, color: Colors.teal, size: 16),
                               const SizedBox(width: 4),
                               Text(
                                 '${selectedDistrict.nameBn} জেলা',
-                                style: const TextStyle(
-                                  color: Color(0xFF6EE7B7),
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                ),
+                                style: const TextStyle(color: Colors.teal, fontWeight: FontWeight.bold, fontSize: 13),
                               ),
-                              const Icon(Icons.arrow_drop_down, color: Color(0xFF10B981), size: 18),
+                              const Icon(Icons.arrow_drop_down, color: Colors.teal, size: 18),
                             ],
                           ),
                         ),
                       ),
                       Text(
                         'আজ: ${toBanglaNumber(DateTime.now().day)} আগস্ট',
-                        style: const TextStyle(color: Colors.white70, fontSize: 12),
+                        style: const TextStyle(color: Colors.black54, fontSize: 12),
                       ),
                     ],
                   ),
-                  const Divider(color: Colors.white12, height: 24),
+                  const Divider(height: 20),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: const BoxDecoration(
-                                    color: Color(0xFFFBBF24),
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                const Text(
-                                  'চলমান ওয়াক্ত',
-                                  style: TextStyle(
-                                    color: Color(0xFFFBBF24),
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '$currentWaqt নামাজের সময় শেষ হতে:',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('চলমান ওয়াক্ত: $currentWaqt', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                          const SizedBox(height: 2),
+                          const Text('ওয়াক্ত শেষ হতে সময় বাকি:', style: TextStyle(color: Colors.black54, fontSize: 11)),
+                        ],
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: const Color(0x2610B981),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: const Color(0xFF10B981), width: 1.5),
+                          color: Colors.teal.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.teal.shade200),
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              remainingFormatted,
-                              style: const TextStyle(
-                                color: Color(0xFF6EE7B7),
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              remainingDigital,
-                              style: const TextStyle(
-                                color: Colors.white54,
-                                fontSize: 10,
-                                fontFamily: 'monospace',
-                              ),
-                            ),
-                          ],
+                        child: Text(
+                          remainingFormatted,
+                          style: const TextStyle(color: Colors.teal, fontWeight: FontWeight.bold, fontSize: 12),
                         ),
                       ),
                     ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(colors: [Color(0xFF007A5E), Color(0xFF005A45)]),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFBBF24),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Text(
+                      toBanglaNumber(userStreakDays),
+                      style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '${toBanglaNumber(userStreakDays)} দিনের মুহাসাবা জমা হয়েছে',
+                    style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'আজকের টিক দেওয়া আমল: ${toBanglaNumber(completedCount)}/${toBanglaNumber(totalCount)} (${toBanglaNumber(percentage)}%)',
+                    style: const TextStyle(color: Colors.white70, fontSize: 12),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 16),
 
-            // ২. মুহাসাবা সম্পন্ন ব্যাজ
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF007A5E),
-                borderRadius: BorderRadius.circular(28),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x66007A5E),
-                    blurRadius: 16,
-                    offset: Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  Container(
-                    width: 64,
-                    height: 72,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFBBF24),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: const Color(0xFFFDE68A), width: 2),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      toBanglaNumber(userStreakDays),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 34,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    '${toBanglaNumber(userStreakDays)} দিনের মুহাসাবা সম্পন্ন',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'আজকের অর্জন: ${toBanglaNumber(completedCount)}/${toBanglaNumber(totalCount)} আমল (${toBanglaNumber(percentage)}%)',
-                    style: const TextStyle(color: Colors.white70, fontSize: 13),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // ৩. ফিল্টার বাটন
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'আজকের টাস্ক',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                const Text('আজকের আমল তালিকা', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 Row(
                   children: [
                     _filterChip('all', 'সব'),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 4),
                     _filterChip('farz', 'নামাজ'),
-                    const SizedBox(width: 6),
-                    _filterChip('nafl_zikr', 'অন্যান্য আমল'),
+                    const SizedBox(width: 4),
+                    _filterChip('nafl_zikr', 'নফল/জিকির'),
                   ],
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
 
-            // ৪. আমল তালিকা
             ListView.separated(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: filteredAmols.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              separatorBuilder: (_, __) => const SizedBox(height: 8),
               itemBuilder: (context, index) {
                 final amol = filteredAmols[index];
-                return InkWell(
-                  onTap: () {
-                    setState(() {
-                      amol.isCompleted = !amol.isCompleted;
-                    });
-
-                    _saveAmolState(amol.id, amol.isCompleted);
-
-                    final allDone = amols.every((a) => a.isCompleted);
-                    if (allDone) {
-                      _triggerCelebration();
-                    }
-                  },
-                  borderRadius: BorderRadius.circular(18),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 250),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: amol.isCompleted ? const Color(0xFF007A5E) : const Color(0xFF141C2E),
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(
-                        color: amol.isCompleted
-                            ? const Color(0x8010B981)
-                            : Colors.white10,
+                return Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: amol.isCompleted ? Colors.teal : Colors.grey.shade200,
+                      width: amol.isCompleted ? 1.5 : 1,
+                    ),
+                  ),
+                  child: CheckboxListTile(
+                    activeColor: Colors.teal,
+                    value: amol.isCompleted,
+                    onChanged: _isSubmittedToday
+                        ? null
+                        : (val) {
+                            setState(() {
+                              amol.isCompleted = val ?? false;
+                            });
+                          },
+                    title: Text(
+                      amol.title,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                        color: amol.isCompleted ? Colors.teal.shade900 : Colors.black87,
                       ),
                     ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Text(
-                                    amol.title,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  if (amol.category == 'nafl_zikr') ...[
-                                    const SizedBox(width: 8),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: amol.isCompleted
-                                            ? Colors.black26
-                                            : const Color(0x33FBBF24),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: const Text(
-                                        'নফল/জিকির',
-                                        style: TextStyle(
-                                          color: Color(0xFFFBBF24),
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                amol.subtitle,
-                                style: TextStyle(
-                                  color: amol.isCompleted ? Colors.white70 : Colors.white38,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Container(
-                          width: 28,
-                          height: 28,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: amol.isCompleted ? Colors.white : Colors.transparent,
-                            border: Border.all(
-                              color: amol.isCompleted ? Colors.transparent : Colors.white38,
-                              width: 2,
-                            ),
-                          ),
-                          child: amol.isCompleted
-                              ? const Icon(Icons.check, size: 20, color: Color(0xFF007A5E))
-                              : null,
-                        ),
-                      ],
-                    ),
+                    subtitle: Text(amol.subtitle, style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                    secondary: amol.category == 'nafl_zikr'
+                        ? Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(color: Colors.amber.shade50, borderRadius: BorderRadius.circular(6)),
+                            child: const Text('নফল', style: TextStyle(fontSize: 10, color: Colors.orange, fontWeight: FontWeight.bold)),
+                          )
+                        : null,
                   ),
                 );
               },
             ),
-            const SizedBox(height: 30),
+            const SizedBox(height: 20),
+
+            SizedBox(
+              height: 50,
+              child: ElevatedButton.icon(
+                onPressed: (_isSubmittedToday || _isSaving) ? null : _submitTodayAmol,
+                icon: _isSaving
+                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : Icon(_isSubmittedToday ? Icons.lock : Icons.cloud_upload),
+                label: Text(
+                  _isSubmittedToday
+                      ? 'আজকের আমল ইতোমধ্যে জমা দেওয়া হয়েছে'
+                      : 'আজকের আমল জমা দিন',
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _isSubmittedToday ? Colors.grey.shade400 : Colors.teal,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
           ],
         ),
       ),
@@ -815,15 +753,15 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
     return GestureDetector(
       onTap: () => setState(() => selectedFilter = key),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF10B981) : const Color(0xFF1A2234),
-          borderRadius: BorderRadius.circular(10),
+          color: isSelected ? Colors.teal : Colors.grey.shade200,
+          borderRadius: BorderRadius.circular(8),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: isSelected ? Colors.white : Colors.white54,
+            color: isSelected ? Colors.white : Colors.black87,
             fontSize: 11,
             fontWeight: FontWeight.bold,
           ),
@@ -831,4 +769,202 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
       ),
     );
   }
+}
+
+/// ---------------------------------------------------------------------------
+/// রঙিন কনফেটি সহ সেলিব্রেশন ডায়ালগ
+/// ---------------------------------------------------------------------------
+class CelebrationConfettiDialog extends StatefulWidget {
+  const CelebrationConfettiDialog({super.key});
+
+  @override
+  State<CelebrationConfettiDialog> createState() => _CelebrationConfettiDialogState();
+}
+
+class _CelebrationConfettiDialogState extends State<CelebrationConfettiDialog>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  final List<ConfettiParticle> _particles = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 3500),
+    )..addListener(() {
+        setState(() {
+          for (var p in _particles) {
+            p.update();
+          }
+        });
+      });
+
+    final colors = [
+      Colors.amber,
+      Colors.teal,
+      Colors.green,
+      Colors.orange,
+      Colors.yellowAccent,
+      Colors.cyan,
+    ];
+
+    for (int i = 0; i < 60; i++) {
+      _particles.add(ConfettiParticle(colors[i % colors.length]));
+    }
+
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        Positioned.fill(
+          child: CustomPaint(
+            painter: ConfettiPainter(_particles),
+          ),
+        ),
+        Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          elevation: 10,
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: Colors.amber.shade300, width: 2),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 70,
+                  height: 70,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFFBBF24),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color(0x66FBBF24),
+                        blurRadius: 15,
+                        offset: Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(Icons.emoji_events_rounded, color: Colors.white, size: 42),
+                ),
+                const SizedBox(height: 14),
+                const Text(
+                  'মাশাআল্লাহ! ১০০% আমল সম্পন্ন',
+                  style: TextStyle(color: Color(0xFF007A5E), fontSize: 19, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'আজকের দিনের সকল আমল সফলভাবে সম্পন্ন করে ক্লাউডে জমা দিয়েছেন!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.black54, fontSize: 13),
+                ),
+                const SizedBox(height: 14),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.teal.shade50,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: Colors.teal.shade200),
+                  ),
+                  child: const Column(
+                    children: [
+                      Text(
+                        'تَقَبَّلَ اللَّهُ مِنَّا وَمِنْكُم صَالِحَ الأَعْمَال',
+                        style: TextStyle(color: Color(0xFF007A5E), fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        '"আল্লাহ তায়ালা আমাদের ও আপনার সকল নেক আমল কবুল করুন।"',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.black54, fontSize: 11, fontStyle: FontStyle.italic),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  height: 46,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.teal,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Text('আলহামদুলিল্লাহ', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class ConfettiParticle {
+  double x = 0.5;
+  double y = 0.3;
+  double vx = 0;
+  double vy = 0;
+  double size = 8;
+  double rotation = 0;
+  final Color color;
+
+  ConfettiParticle(this.color) {
+    final rand = DateTime.now().microsecondsSinceEpoch;
+    x = (rand % 100) / 100.0;
+    y = -0.1 - ((rand % 50) / 100.0);
+    vx = ((rand % 10) - 5) / 1000.0;
+    vy = 0.005 + ((rand % 10) / 1000.0);
+    size = 6.0 + (rand % 6);
+  }
+
+  void update() {
+    x += vx;
+    y += vy;
+    rotation += 0.08;
+    if (y > 1.2) {
+      y = -0.1;
+    }
+  }
+}
+
+class ConfettiPainter extends CustomPainter {
+  final List<ConfettiParticle> particles;
+  ConfettiPainter(this.particles);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    for (var p in particles) {
+      final paint = Paint()..color = p.color;
+      final px = p.x * size.width;
+      final py = p.y * size.height;
+
+      canvas.save();
+      canvas.translate(px, py);
+      canvas.rotate(p.rotation);
+      canvas.drawRect(Rect.fromCenter(center: Offset.zero, width: p.size, height: p.size * 0.6), paint);
+      canvas.restore();
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }

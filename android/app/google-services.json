@@ -12,7 +12,20 @@
           "package_name": "com.example.my_masayel_app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "148059630703-88uo9j4p42cflb4d11bhitc693cs1lba.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.my_masayel_app",
+            "certificate_hash": "55a4f838ea523ecc998d88cc1fea45fc5bf8088d"
+          }
+        },
+        {
+          "client_id": "148059630703-268mdv8ftooov70bbcn1hlcr4hlbo4b2.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyAXZ8_nZhDgbxQaReyUEIA7gtxONBsf7-M"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "148059630703-268mdv8ftooov70bbcn1hlcr4hlbo4b2.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
