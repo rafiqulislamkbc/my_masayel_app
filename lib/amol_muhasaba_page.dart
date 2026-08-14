@@ -2,9 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'auth_service.dart';
 
 String toBanglaNumber(dynamic input) {
   const Map<String, String> bnDigits = {
@@ -159,37 +156,17 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
     super.dispose();
   }
 
-  // ইউজার আইডি ভিত্তিক স্বতন্ত্র ডাটা লোড
+  // ডিভাইসের লোকাল স্টোরেজ থেকে ডাটা লোড
   Future<void> _loadCurrentUserData() async {
-    final user = FirebaseAuth.instance.currentUser;
     final prefs = await SharedPreferences.getInstance();
     final savedDistrictId = prefs.getString('user_district_id') ?? 'dhaka';
     final todayKey = DateTime.now().toIso8601String().substring(0, 10);
 
-    // সব আমল রিসেট (আগের ইউজারের ডাটা মুছে ফ্রেশ করা)
-    for (var amol in amols) {
-      amol.isCompleted = false;
-    }
-
-    if (user == null) {
-      if (mounted) {
-        setState(() {
-          _isSubmittedToday = false;
-          userStreakDays = 0;
-        });
-      }
-      return;
-    }
-
-    final uid = user.uid;
-    // ১. এই নির্দিষ্ট ইউজারের লোকাল ডাটা
-    final localSubmitted = prefs.getBool('sub_${uid}_$todayKey') ?? false;
-    final localStreak = prefs.getInt('streak_$uid') ?? 0;
+    final localSubmitted = prefs.getBool('sub_local_$todayKey') ?? false;
+    final localStreak = prefs.getInt('streak_local') ?? 0;
 
     for (var amol in amols) {
-      if (prefs.containsKey('amol_${uid}_${todayKey}_${amol.id}')) {
-        amol.isCompleted = prefs.getBool('amol_${uid}_${todayKey}_${amol.id}') ?? false;
-      }
+      amol.isCompleted = prefs.getBool('amol_local_${todayKey}_${amol.id}') ?? false;
     }
 
     if (mounted) {
@@ -202,96 +179,26 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
         );
       });
     }
-
-    // ২. ফায়ারস্টোর থেকে সরাসরি ক্লাউড ডাটা সিঙ্ক
-    try {
-      final recordsRef = FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .collection('muhasaba_records');
-
-      final countSnap = await recordsRef.get();
-      final totalDays = countSnap.docs.length;
-
-      final todaySnap = await recordsRef.doc(todayKey).get();
-
-      if (todaySnap.exists && todaySnap.data() != null) {
-        final data = todaySnap.data()!;
-        final Map<String, dynamic>? tasks = data['tasks'];
-        if (tasks != null) {
-          for (var amol in amols) {
-            if (tasks.containsKey(amol.id)) {
-              amol.isCompleted = tasks[amol.id] == true;
-            }
-          }
-        }
-        _isSubmittedToday = data['isSubmitted'] ?? true;
-      }
-
-      if (mounted) {
-        setState(() {
-          userStreakDays = totalDays;
-        });
-      }
-    } catch (e) {
-      debugPrint('Firestore Fetch Error: $e');
-    }
   }
 
-// বাটন ক্লিকে ফায়ারস্টোরে সরাসরি ক্লাউড ডাটা সেভ
+  // বাটন ক্লিকে ডাটা সেভ
   Future<void> _submitTodayAmol() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('অনুগ্রহ করে প্রথমে লগইন করুন')),
-      );
-      return;
-    }
-
     setState(() => _isSaving = true);
 
-    final uid = user.uid;
     final dateKey = DateTime.now().toIso8601String().substring(0, 10);
-    final Map<String, bool> taskMap = {
-      for (var item in amols) item.id: item.isCompleted
-    };
-
     final completedCount = amols.where((a) => a.isCompleted).length;
     final totalCount = amols.length;
 
     try {
-      // ১. ইউজারের প্রোফাইল ফায়ারস্টোরে সরাসরি সেভ
-      await FirebaseFirestore.instance.collection('users').doc(uid).set({
-        'uid': uid,
-        'email': user.email ?? '',
-        'name': user.displayName ?? 'মুসলিম সাথী',
-        'lastActive': dateKey,
-        'lastSubmitTime': DateTime.now().toIso8601String(),
-      }, SetOptions(merge: true));
-
-      // ২. আমল রেকর্ড সরাসরি ফায়ারস্টোরে সেভ
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .collection('muhasaba_records')
-          .doc(dateKey)
-          .set({
-        'date': dateKey,
-        'tasks': taskMap,
-        'completedCount': completedCount,
-        'totalCount': totalCount,
-        'isSubmitted': true,
-        'submittedAt': DateTime.now().toIso8601String(),
-      }, SetOptions(merge: true));
-
-      // ৩. সফল হলে লোকাল ফোনেও সেভ করা
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('sub_${uid}_$dateKey', true);
-      for (var entry in taskMap.entries) {
-        await prefs.setBool('amol_${uid}_${dateKey}_${entry.key}', entry.value);
+      await prefs.setBool('sub_local_$dateKey', true);
+
+      for (var item in amols) {
+        await prefs.setBool('amol_local_${dateKey}_${item.id}', item.isCompleted);
       }
+
       final newStreak = userStreakDays + 1;
-      await prefs.setInt('streak_$uid', newStreak);
+      await prefs.setInt('streak_local', newStreak);
 
       if (mounted) {
         setState(() {
@@ -300,7 +207,7 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
           _isSaving = false;
         });
 
-        // পপআপ দেখানো
+        // পপআপ ডায়ালগ
         if (completedCount == totalCount) {
           _showCelebrationDialog();
         } else {
@@ -311,12 +218,6 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
       debugPrint('সেভ এরর: $e');
       if (mounted) {
         setState(() => _isSaving = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('সেভ করতে সমস্যা: $e'),
-            backgroundColor: Colors.red.shade800,
-          ),
-        );
       }
     }
   }
@@ -537,8 +438,6 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
         ? amols
         : amols.where((a) => a.category == selectedFilter).toList();
 
-    final user = FirebaseAuth.instance.currentUser;
-
     return Scaffold(
       backgroundColor: const Color(0xFFF6F8F7),
       appBar: AppBar(
@@ -547,75 +446,19 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
         elevation: 1,
         centerTitle: true,
         title: const Text('আমলের মুহাসাবা', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-        actions: [
-          IconButton(
-            tooltip: 'লগআউট',
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              final confirm = await showDialog<bool>(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('লগআউট নিশ্চিতকরণ'),
-                  content: const Text('আপনি কি আপনার অ্যাকাউন্ট থেকে লগআউট করতে চান?'),
-                  actions: [
-                    TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('না')),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.teal, foregroundColor: Colors.white),
-                      onPressed: () => Navigator.pop(context, true),
-                      child: const Text('লগআউট'),
-                    ),
-                  ],
-                ),
-              );
-
-              if (confirm == true) {
-                // সব ফিল্ড ফ্রেশ করে লগআউট
-                for (var amol in amols) {
-                  amol.isCompleted = false;
-                }
-                await AuthService.signOut();
-              }
-            },
-          ),
-        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (user != null)
-              Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.teal.shade200),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.account_circle, color: Colors.teal, size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'ব্যবহারকারী: ${user.displayName ?? user.email ?? "নাম প্রকাশে অনিচ্ছুক"}',
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black87),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const Icon(Icons.cloud_done, color: Colors.teal, size: 18),
-                  ],
-                ),
-              ),
-
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(18),
-                boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 3)),
+                boxShadow: const [
+                  BoxShadow(color: Color(0x0A000000), blurRadius: 10, offset: Offset(0, 3)),
                 ],
               ),
               child: Column(
@@ -647,7 +490,7 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
                         ),
                       ),
                       Text(
-                        'আজ: ${toBanglaNumber(DateTime.now().day)} আগস্ট',
+                        'আজ: ${toBanglaNumber(DateTime.now().day)} তারিখ',
                         style: const TextStyle(color: Colors.black54, fontSize: 12),
                       ),
                     ],
@@ -788,7 +631,7 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
                 onPressed: (_isSubmittedToday || _isSaving) ? null : _submitTodayAmol,
                 icon: _isSaving
                     ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                    : Icon(_isSubmittedToday ? Icons.lock : Icons.cloud_upload),
+                    : Icon(_isSubmittedToday ? Icons.lock : Icons.check_circle),
                 label: Text(
                   _isSubmittedToday
                       ? 'আজকের আমল ইতোমধ্যে জমা দেওয়া হয়েছে'

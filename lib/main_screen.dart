@@ -3,7 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'database_helper.dart'; 
 import 'home_page.dart';
 import 'masala_detail_page.dart';
-import 'muhasaba_auth_gate.dart';
+import 'amol_muhasaba_page.dart';
 
 class DonationPage extends StatelessWidget {
   const DonationPage({super.key});
@@ -79,7 +79,7 @@ class _MainScreenState extends State<MainScreen> {
   // ৪টি স্বতন্ত্র পেজের তালিকা
   final List<Widget> _pages = [
     const HomePage(),          // 0: হোম
-    const MuhasabaAuthGate(),  // 1: মুহাসাবা (লগইন চেক সহ)
+    const AmolMuhasabaPage(),  // 1: মুহাসাবা (লগইন চেক সহ)
     const SizedBox(),          // 2: সর্বশেষ পঠিত (ডায়ালগ/পুশ পেজ)
     const DonationPage(),      // 3: অনুদান
   ];
