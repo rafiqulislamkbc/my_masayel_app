@@ -30,7 +30,7 @@ class DistrictData {
 const List<DistrictData> all64Districts = [
   DistrictData(id: 'dhaka', nameBn: 'ঢাকা', division: 'ঢাকা', offsetMinutes: 0),
   DistrictData(id: 'gazipur', nameBn: 'গাজীপুর', division: 'ঢাকা', offsetMinutes: 0),
-  DistrictData(id: 'narayanganj', nameBn: 'নারায়ণগঞ্জ', division: 'ঢাকা', offsetMinutes: -1),
+  DistrictData(id: 'narayanganj', nameBn: 'নারায়ণগঞ্জ', division: 'ঢাকা', offsetMinutes: -1),
   DistrictData(id: 'tangail', nameBn: 'টাঙ্গাইল', division: 'ঢাকা', offsetMinutes: 1),
   DistrictData(id: 'gopalganj', nameBn: 'গোপালগঞ্জ', division: 'ঢাকা', offsetMinutes: 2),
   DistrictData(id: 'faridpur', nameBn: 'ফরিদপুর', division: 'ঢাকা', offsetMinutes: 2),
@@ -38,18 +38,18 @@ const List<DistrictData> all64Districts = [
   DistrictData(id: 'manikganj', nameBn: 'মানিকগঞ্জ', division: 'ঢাকা', offsetMinutes: 1),
   DistrictData(id: 'munshiganj', nameBn: 'মুন্সীগঞ্জ', division: 'ঢাকা', offsetMinutes: -1),
   DistrictData(id: 'narsingdi', nameBn: 'নরসিংদী', division: 'ঢাকা', offsetMinutes: -1),
-  DistrictData(id: 'rajbari', nameBn: 'রাজবাড়ী', division: 'ঢাকা', offsetMinutes: 3),
+  DistrictData(id: 'rajbari', nameBn: 'রাজবাড়ী', division: 'ঢাকা', offsetMinutes: 3),
   DistrictData(id: 'shariatpur', nameBn: 'শরীয়তপুর', division: 'ঢাকা', offsetMinutes: 0),
   DistrictData(id: 'kishoreganj', nameBn: 'কিশোরগঞ্জ', division: 'ঢাকা', offsetMinutes: -2),
   DistrictData(id: 'chattogram', nameBn: 'চট্টগ্রাম', division: 'চট্টগ্রাম', offsetMinutes: -5),
   DistrictData(id: 'coxsbazar', nameBn: 'কক্সবাজার', division: 'চট্টগ্রাম', offsetMinutes: -6),
   DistrictData(id: 'cumilla', nameBn: 'কুমিল্লা', division: 'চট্টগ্রাম', offsetMinutes: -3),
   DistrictData(id: 'feni', nameBn: 'ফেনী', division: 'চট্টগ্রাম', offsetMinutes: -4),
-  DistrictData(id: 'brahmanbaria', nameBn: 'ব্রাহ্মণবাড়িয়া', division: 'চট্টগ্রাম', offsetMinutes: -2),
+  DistrictData(id: 'brahmanbaria', nameBn: 'ব্রাহ্মণবাড়িয়া', division: 'চট্টগ্রাম', offsetMinutes: -2),
   DistrictData(id: 'chandpur', nameBn: 'চাঁদপুর', division: 'চট্টগ্রাম', offsetMinutes: -1),
   DistrictData(id: 'lakshmipur', nameBn: 'লক্ষ্মীপুর', division: 'চট্টগ্রাম', offsetMinutes: -2),
-  DistrictData(id: 'noakhali', nameBn: 'নোয়াখালী', division: 'চট্টগ্রাম', offsetMinutes: -3),
-  DistrictData(id: 'khagrachhari', nameBn: 'খাগড়াছড়ি', division: 'চট্টগ্রাম', offsetMinutes: -6),
+  DistrictData(id: 'noakhali', nameBn: 'নোয়াখালী', division: 'চট্টগ্রাম', offsetMinutes: -3),
+  DistrictData(id: 'khagrachhari', nameBn: 'খাগড়াছড়ি', division: 'চট্টগ্রাম', offsetMinutes: -6),
   DistrictData(id: 'rangamati', nameBn: 'রাঙ্গামাটি', division: 'চট্টগ্রাম', offsetMinutes: -6),
   DistrictData(id: 'bandarban', nameBn: 'বান্দরবান', division: 'চট্টগ্রাম', offsetMinutes: -6),
   DistrictData(id: 'sylhet', nameBn: 'সিলেট', division: 'সিলেট', offsetMinutes: -6),
@@ -57,41 +57,41 @@ const List<DistrictData> all64Districts = [
   DistrictData(id: 'habiganj', nameBn: 'হবিগঞ্জ', division: 'সিলেট', offsetMinutes: -4),
   DistrictData(id: 'sunamganj', nameBn: 'সুনামগঞ্জ', division: 'সিলেট', offsetMinutes: -5),
   DistrictData(id: 'rajshahi', nameBn: 'রাজশাহী', division: 'রাজশাহী', offsetMinutes: 6),
-  DistrictData(id: 'bogra', nameBn: 'বগুড়া', division: 'রাজশাহী', offsetMinutes: 4),
+  DistrictData(id: 'bogra', nameBn: 'বগুড়া', division: 'রাজশাহী', offsetMinutes: 4),
   DistrictData(id: 'pabna', nameBn: 'পাবনা', division: 'রাজশাহী', offsetMinutes: 4),
   DistrictData(id: 'sirajganj', nameBn: 'সিরাজগঞ্জ', division: 'রাজশাহী', offsetMinutes: 2),
   DistrictData(id: 'naogaon', nameBn: 'নওগাঁ', division: 'রাজশাহী', offsetMinutes: 6),
   DistrictData(id: 'natore', nameBn: 'নাটোর', division: 'রাজশাহী', offsetMinutes: 5),
   DistrictData(id: 'chapainawabganj', nameBn: 'চাঁপাইনবাবগঞ্জ', division: 'রাজশাহী', offsetMinutes: 8),
-  DistrictData(id: 'joypurhat', nameBn: 'জয়পুরহাট', division: 'রাজশাহী', offsetMinutes: 5),
+  DistrictData(id: 'joypurhat', nameBn: 'জয়পুরহাট', division: 'রাজশাহী', offsetMinutes: 5),
   DistrictData(id: 'khulna', nameBn: 'খুলনা', division: 'খুলনা', offsetMinutes: 3),
   DistrictData(id: 'bagerhat', nameBn: 'বাগেরহাট', division: 'খুলনা', offsetMinutes: 2),
-  DistrictData(id: 'chuadanga', nameBn: 'চুয়াডাঙ্গা', division: 'খুলনা', offsetMinutes: 6),
+  DistrictData(id: 'chuadanga', nameBn: 'চুয়াডাঙ্গা', division: 'খুলনা', offsetMinutes: 6),
   DistrictData(id: 'jashore', nameBn: 'যশোর', division: 'খুলনা', offsetMinutes: 4),
   DistrictData(id: 'jhenaidah', nameBn: 'ঝিনাইদহ', division: 'খুলনা', offsetMinutes: 4),
-  DistrictData(id: 'kushtia', nameBn: 'কুষ্টিয়া', division: 'খুলনা', offsetMinutes: 5),
+  DistrictData(id: 'kushtia', nameBn: 'কুষ্টিয়া', division: 'খুলনা', offsetMinutes: 5),
   DistrictData(id: 'magura', nameBn: 'মাগুরা', division: 'খুলনা', offsetMinutes: 3),
   DistrictData(id: 'meherpur', nameBn: 'মেহেরপুর', division: 'খুলনা', offsetMinutes: 6),
-  DistrictData(id: 'narail', nameBn: 'নড়াইল', division: 'খুলনা', offsetMinutes: 3),
+  DistrictData(id: 'narail', nameBn: 'নড়াইল', division: 'খুলনা', offsetMinutes: 3),
   DistrictData(id: 'satkhira', nameBn: 'সাতক্ষীরা', division: 'খুলনা', offsetMinutes: 5),
   DistrictData(id: 'barishal', nameBn: 'বরিশাল', division: 'বরিশাল', offsetMinutes: 1),
   DistrictData(id: 'barguna', nameBn: 'বরগুনা', division: 'বরিশাল', offsetMinutes: 2),
   DistrictData(id: 'bhola', nameBn: 'ভোলা', division: 'বরিশাল', offsetMinutes: -1),
   DistrictData(id: 'jhalokati', nameBn: 'ঝালকাঠি', division: 'বরিশাল', offsetMinutes: 2),
-  DistrictData(id: 'patuakhali', nameBn: 'পটুয়াখালী', division: 'বরিশাল', offsetMinutes: 1),
+  DistrictData(id: 'patuakhali', nameBn: 'পটুয়াখালী', division: 'বরিশাল', offsetMinutes: 1),
   DistrictData(id: 'pirojpur', nameBn: 'পিরোজপুর', division: 'বরিশাল', offsetMinutes: 3),
   DistrictData(id: 'rangpur', nameBn: 'রংপুর', division: 'রংপুর', offsetMinutes: 6),
   DistrictData(id: 'dinajpur', nameBn: 'দিনাজপুর', division: 'রংপুর', offsetMinutes: 8),
   DistrictData(id: 'gaibandha', nameBn: 'গাইবান্ধা', division: 'রংপুর', offsetMinutes: 4),
-  DistrictData(id: 'kurigram', nameBn: 'কুড়িগ্রাম', division: 'রংপুর', offsetMinutes: 3),
+  DistrictData(id: 'kurigram', nameBn: 'কুড়িগ্রাম', division: 'রংপুর', offsetMinutes: 3),
   DistrictData(id: 'lalmonirhat', nameBn: 'লালমনিরহাট', division: 'রংপুর', offsetMinutes: 5),
   DistrictData(id: 'nilphamari', nameBn: 'নীলফামারী', division: 'রংপুর', offsetMinutes: 7),
-  DistrictData(id: 'panchagarh', nameBn: 'পঞ্চগড়', division: 'রংপুর', offsetMinutes: 10),
+  DistrictData(id: 'panchagarh', nameBn: 'পঞ্চগড়', division: 'রংপুর', offsetMinutes: 10),
   DistrictData(id: 'thakurgaon', nameBn: 'ঠাকুরগাঁও', division: 'রংপুর', offsetMinutes: 9),
-  DistrictData(id: 'mymensingh', nameBn: 'ময়মনসিংহ', division: 'ময়মনসিংহ', offsetMinutes: 0),
-  DistrictData(id: 'jamalpur', nameBn: 'জামালপুর', division: 'ময়মনসিংহ', offsetMinutes: 2),
-  DistrictData(id: 'netrokona', nameBn: 'নেত্রকোণা', division: 'ময়মনসিংহ', offsetMinutes: -2),
-  DistrictData(id: 'sherpur', nameBn: 'শেরপুর', division: 'ময়মনসিংহ', offsetMinutes: 1),
+  DistrictData(id: 'mymensingh', nameBn: 'ময়মনসিংহ', division: 'ময়মনসিংহ', offsetMinutes: 0),
+  DistrictData(id: 'jamalpur', nameBn: 'জামালপুর', division: 'ময়মনসিংহ', offsetMinutes: 2),
+  DistrictData(id: 'netrokona', nameBn: 'নেত্রকোণা', division: 'ময়মনসিংহ', offsetMinutes: -2),
+  DistrictData(id: 'sherpur', nameBn: 'শেরপুর', division: 'ময়মনসিংহ', offsetMinutes: 1),
 ];
 
 class AmolItem {
@@ -136,12 +136,12 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
     AmolItem(id: 'asr', title: 'আসর', subtitle: '৪ রাকাত ফরজ সালাত', category: 'farz'),
     AmolItem(id: 'maghrib', title: 'মাগরিব', subtitle: '৩ রাকাত ফরজ ও ২ রাকাত সুন্নাত', category: 'farz'),
     AmolItem(id: 'isha', title: 'এশা', subtitle: '৪ রাকাত ফরজ ও বিতর সালাত', category: 'farz'),
-    AmolItem(id: 'quran', title: 'কুরআন তিলাওয়াত', subtitle: 'কমপক্ষে ১০ আয়াত বা অর্থসহ ১ রুকু', category: 'nafl_zikr'),
+    AmolItem(id: 'quran', title: 'কুরআন তিলাওয়াত', subtitle: 'কমপক্ষে ১০ আয়াত বা অর্থসহ ১ রুকু', category: 'nafl_zikr'),
     AmolItem(id: 'chasht', title: 'চাশত সালাত (সালাতুদ দুহা)', subtitle: 'সূর্য ওঠার পর ২ থেকে ৪ রাকাত সালাত', category: 'nafl_zikr'),
-    AmolItem(id: 'awwabin', title: 'আওয়াবিন সালাত', subtitle: 'মাগরিবের পর ৬ রাকাত নফল সালাত', category: 'nafl_zikr'),
+    AmolItem(id: 'awwabin', title: 'আওয়াবিন সালাত', subtitle: 'মাগরিবের পর ৬ রাকাত নফল সালাত', category: 'nafl_zikr'),
     AmolItem(id: 'durood', title: 'দরুদ শরীফ (কমপক্ষে ১০০ বার)', subtitle: 'রাসূলুল্লাহ (ﷺ)-এর ওপর ১০০ বার দরুদ পাঠ', category: 'nafl_zikr'),
     AmolItem(id: 'istighfar', title: 'ইস্তিগফার ও জিকির (১০০ বার)', subtitle: 'সকাল ও সন্ধ্যার মাসনুন জিকির', category: 'nafl_zikr'),
-    AmolItem(id: 'tahajjud', title: 'তাহাজ্জুদ সালাত', subtitle: 'রাতের শেষ তৃতীয়াংশে বিশেষ ইবাদত', category: 'nafl_zikr'),
+    AmolItem(id: 'tahajjud', title: 'তাহাজ্জুদ সালাত', subtitle: 'রাতের শেষ তৃতীয়াংশে বিশেষ ইবাদত', category: 'nafl_zikr'),
   ];
 
   @override
@@ -161,9 +161,12 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
   Future<void> _loadCurrentUserData() async {
     final user = FirebaseAuth.instance.currentUser;
     final prefs = await SharedPreferences.getInstance();
-    final savedDistrictId = prefs.getString('user_district_id') ?? 'dhaka';
-    final todayKey = DateTime.now().toIso8601String().substring(0, 10);
 
+    final todayKey = DateTime.now()
+        .toIso8601String()
+        .substring(0, 10);
+
+    // প্রথমে সব আমল unchecked
     for (var amol in amols) {
       amol.isCompleted = false;
     }
@@ -179,94 +182,305 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
     }
 
     final uid = user.uid;
-    final localSubmitted = prefs.getBool('sub_${uid}_$todayKey') ?? false;
-    final localStreak = prefs.getInt('streak_$uid') ?? 0;
+    String savedDistrictId = 'dhaka';
 
-    for (var amol in amols) {
-      if (prefs.containsKey('amol_${uid}_${todayKey}_${amol.id}')) {
-        amol.isCompleted = prefs.getBool('amol_${uid}_${todayKey}_${amol.id}') ?? false;
-      }
-    }
-
-    if (mounted) {
-      setState(() {
-        _isSubmittedToday = localSubmitted;
-        userStreakDays = localStreak;
-        selectedDistrict = all64Districts.firstWhere(
-          (d) => d.id == savedDistrictId,
-          orElse: () => all64Districts[0],
-        );
-      });
-    }
-
-    // ফায়ারস্টোর থেকে সরাসরি ক্লাউড ডাটা সিঙ্ক
     try {
-      final recordsRef = FirebaseFirestore.instance
+      final firestore = FirebaseFirestore.instance;
+
+      // ========================================
+      // ১. User Profile Load
+      // ========================================
+      final userRef = firestore
           .collection('users')
-          .doc(uid)
+          .doc(uid);
+
+      final userSnap = await userRef.get();
+
+      String districtId = 'dhaka';
+
+      if (userSnap.exists && userSnap.data() != null) {
+        final userData = userSnap.data()!;
+
+        districtId =
+            userData['districtId']?.toString() ?? 'dhaka';
+      } else {
+        // যদি পুরোনো কোনো user-এর profile না থাকে
+        await userRef.set({
+          'uid': uid,
+          'email': user.email ?? '',
+          'name': user.displayName ?? 'মুসলিম সাথী',
+          'createdAt': FieldValue.serverTimestamp(),
+          'lastLogin': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      }
+
+      // ========================================
+      // ২. জেলা Local + Cloud থেকে সেট
+      // ========================================
+      savedDistrictId =
+          prefs.getString('user_district_id') ?? districtId;
+
+      final selected = all64Districts.firstWhere(
+        (d) => d.id == savedDistrictId,
+        orElse: () => all64Districts.first,
+      );
+
+      // ========================================
+      // ৩. আজকের মুহাসাবা Firestore থেকে Load
+      // ========================================
+      final recordsRef = userRef
           .collection('muhasaba_records');
 
-      final countSnap = await recordsRef.get();
-      final totalDays = countSnap.docs.length;
-      final todaySnap = await recordsRef.doc(todayKey).get();
+      final todaySnap = await recordsRef
+          .doc(todayKey)
+          .get();
+
+      bool submittedToday = false;
 
       if (todaySnap.exists && todaySnap.data() != null) {
         final data = todaySnap.data()!;
-        final Map<String, dynamic>? tasks = data['tasks'];
+
+        submittedToday =
+            data['isSubmitted'] == true;
+
+        final tasks =
+            data['tasks'] as Map<String, dynamic>?;
+
         if (tasks != null) {
           for (var amol in amols) {
             if (tasks.containsKey(amol.id)) {
-              amol.isCompleted = tasks[amol.id] == true;
+              amol.isCompleted =
+                  tasks[amol.id] == true;
             }
           }
         }
-        _isSubmittedToday = data['isSubmitted'] ?? true;
+      }
+
+      // ========================================
+      // ৪. Streak হিসাব
+      // ========================================
+      final streak = await _calculateStreak(recordsRef);
+
+      // ========================================
+      // ৫. Local Cache আপডেট
+      // ========================================
+      await prefs.setString(
+        'user_district_id',
+        selected.id,
+      );
+
+      await prefs.setBool(
+        'sub_${uid}_$todayKey',
+        submittedToday,
+      );
+
+      for (var amol in amols) {
+        await prefs.setBool(
+          'amol_${uid}_${todayKey}_${amol.id}',
+          amol.isCompleted,
+        );
+      }
+
+      await prefs.setInt(
+        'streak_$uid',
+        streak,
+      );
+
+      if (mounted) {
+        setState(() {
+          _isSubmittedToday = submittedToday;
+          userStreakDays = streak;
+          selectedDistrict = selected;
+        });
+      }
+    } catch (e) {
+      debugPrint(
+        'Firestore Load Error: $e',
+      );
+
+      // ========================================
+      // Firestore ব্যর্থ হলে Local Cache ব্যবহার
+      // ========================================
+      final localSubmitted =
+          prefs.getBool(
+                'sub_${uid}_$todayKey',
+              ) ??
+              false;
+
+      final localStreak =
+          prefs.getInt(
+                'streak_$uid',
+              ) ??
+              0;
+
+      for (var amol in amols) {
+        amol.isCompleted =
+            prefs.getBool(
+                  'amol_${uid}_${todayKey}_${amol.id}',
+                ) ??
+                false;
       }
 
       if (mounted) {
         setState(() {
-          if (totalDays > userStreakDays) {
-            userStreakDays = totalDays;
-          }
+          _isSubmittedToday =
+              localSubmitted;
+
+          userStreakDays =
+              localStreak;
+
+          selectedDistrict =
+              all64Districts.firstWhere(
+            (d) => d.id == savedDistrictId,
+            orElse: () => all64Districts.first,
+          );
         });
       }
+    }
+  }
+
+  Future<int> _calculateStreak(
+    CollectionReference recordsRef,
+  ) async {
+    try {
+      final snapshot = await recordsRef.get();
+
+      if (snapshot.docs.isEmpty) {
+        return 0;
+      }
+
+      final dates = snapshot.docs
+          .map((doc) => doc.id)
+          .where((date) {
+            return RegExp(
+              r'^\d{4}-\d{2}-\d{2}$',
+            ).hasMatch(date);
+          })
+          .toList();
+
+      dates.sort((a, b) => b.compareTo(a));
+
+      if (dates.isEmpty) {
+        return 0;
+      }
+
+      DateTime today = DateTime(
+        DateTime.now().year,
+        DateTime.now().month,
+        DateTime.now().day,
+      );
+
+      DateTime latestDate =
+          DateTime.parse(dates.first);
+
+      // আজকের বা গতকালের record না হলে current streak নেই
+      final difference =
+          today.difference(latestDate).inDays;
+
+      if (difference > 1) {
+        return 0;
+      }
+
+      int streak = 1;
+
+      DateTime previousDate =
+          latestDate;
+
+      for (int i = 1; i < dates.length; i++) {
+        final currentDate =
+            DateTime.parse(dates[i]);
+
+        final gap =
+            previousDate.difference(currentDate).inDays;
+
+        if (gap == 1) {
+          streak++;
+          previousDate = currentDate;
+        } else if (gap == 0) {
+          continue;
+        } else {
+          break;
+        }
+      }
+
+      return streak;
     } catch (e) {
-      debugPrint('Firestore Fetch Error: $e');
+      debugPrint(
+        'Streak Calculation Error: $e',
+      );
+      return 0;
     }
   }
 
   Future<void> _submitTodayAmol() async {
     final user = FirebaseAuth.instance.currentUser;
+
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('অনুগ্রহ করে প্রথমে লগইন করুন')),
+        const SnackBar(
+          content: Text('অনুগ্রহ করে প্রথমে লগইন করুন'),
+        ),
       );
+      return;
+    }
+
+    if (_isSubmittedToday) {
       return;
     }
 
     setState(() => _isSaving = true);
 
-    final uid = user.uid;
-    final dateKey = DateTime.now().toIso8601String().substring(0, 10);
-    final Map<String, bool> taskMap = {
-      for (var item in amols) item.id: item.isCompleted
-    };
-
-    final completedCount = amols.where((a) => a.isCompleted).length;
-    final totalCount = amols.length;
-
     try {
-      await FirebaseFirestore.instance.collection('users').doc(uid).set({
+      final firestore =
+          FirebaseFirestore.instance;
+
+      final uid = user.uid;
+
+      final dateKey = DateTime.now()
+          .toIso8601String()
+          .substring(0, 10);
+
+      // ========================================
+      // আজকের আমলের Map
+      // ========================================
+      final Map<String, bool> taskMap = {
+        for (var item in amols)
+          item.id: item.isCompleted,
+      };
+
+      final completedCount =
+          amols.where(
+            (a) => a.isCompleted,
+          ).length;
+
+      final totalCount =
+          amols.length;
+
+      // ========================================
+      // User Profile Reference
+      // ========================================
+      final userRef = firestore
+          .collection('users')
+          .doc(uid);
+
+      // ========================================
+      // User Profile Update
+      // ========================================
+      await userRef.set({
         'uid': uid,
         'email': user.email ?? '',
         'name': user.displayName ?? 'মুসলিম সাথী',
+        'districtId': selectedDistrict.id,
+        'districtName': selectedDistrict.nameBn,
         'lastActive': dateKey,
-        'lastSubmitTime': DateTime.now().toIso8601String(),
+        'lastSubmitTime':
+            FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
+      // ========================================
+      // আজকের Muhasaba Save
+      // ========================================
+      await userRef
           .collection('muhasaba_records')
           .doc(dateKey)
           .set({
@@ -275,69 +489,108 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
         'completedCount': completedCount,
         'totalCount': totalCount,
         'isSubmitted': true,
-        'submittedAt': DateTime.now().toIso8601String(),
+        'districtId': selectedDistrict.id,
+        'districtName': selectedDistrict.nameBn,
+        'submittedAt':
+            FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('sub_${uid}_$dateKey', true);
-      for (var entry in taskMap.entries) {
-        await prefs.setBool('amol_${uid}_${dateKey}_${entry.key}', entry.value);
-      }
-      final newStreak = userStreakDays + 1;
-      await prefs.setInt('streak_$uid', newStreak);
+      // ========================================
+      // Streak পুনরায় হিসাব
+      // ========================================
+      final streak =
+          await _calculateStreak(
+        userRef.collection('muhasaba_records'),
+      );
 
+      // ========================================
+      // Local Cache
+      // ========================================
+      final prefs =
+          await SharedPreferences.getInstance();
+
+      await prefs.setBool(
+        'sub_${uid}_$dateKey',
+        true,
+      );
+
+      for (var entry
+          in taskMap.entries) {
+        await prefs.setBool(
+          'amol_${uid}_${dateKey}_${entry.key}',
+          entry.value,
+        );
+      }
+
+      await prefs.setInt(
+        'streak_$uid',
+        streak,
+      );
+
+      await prefs.setString(
+        'user_district_id',
+        selectedDistrict.id,
+      );
+
+      // ========================================
+      // UI Update
+      // ========================================
       if (mounted) {
         setState(() {
           _isSubmittedToday = true;
-          userStreakDays = newStreak;
+          userStreakDays = streak;
           _isSaving = false;
         });
 
         if (completedCount == totalCount) {
           _showCelebrationDialog();
         } else {
-          _showStandardThankYouDialog(completedCount, totalCount);
+          _showStandardThankYouDialog(
+            completedCount,
+            totalCount,
+          );
         }
       }
     } catch (e) {
-      debugPrint('সেভ এরর: $e');
+      debugPrint(
+        'Firestore Save Error: $e',
+      );
+
       if (mounted) {
         setState(() => _isSaving = false);
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('সেভ করতে সমস্যা: $e'),
-            backgroundColor: Colors.red.shade800,
+            content: Text(
+              'সেভ করতে সমস্যা হয়েছে: $e',
+            ),
+            backgroundColor:
+                Colors.red.shade800,
           ),
         );
       }
     }
   }
 
-  void _showStandardThankYouDialog(int done, int total) {
+  void _showStandardThankYouDialog(int completedCount, int totalCount) {
     showDialog(
       context: context,
+      barrierDismissible: true,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        backgroundColor: Colors.white,
-        title: const Row(
-          children: [
-            Icon(Icons.check_circle_outline, color: Colors.teal, size: 28),
-            SizedBox(width: 8),
-            Text('আমল জমা হয়েছে', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.teal)),
-          ],
-        ),
+        title: const Text('জাযাকাল্লাহু খাইরান', style: TextStyle(color: Colors.teal, fontWeight: FontWeight.bold)),
         content: Text(
-          'আলহামদুলিল্লাহ! আজকের দিনের ${toBanglaNumber(done)}টি আমল সফলভাবে সম্পন্ন হয়েছে। বাকি আমলগুলোও যথাসময়ে আদায় চেষ্টা করুন।',
-          style: const TextStyle(fontSize: 14, color: Colors.black87),
+          'আপনি আজ $completedCount/$totalCount আমল সম্পন্ন করেছেন। প্রতিদিনের ধারাবাহিকতা বজায় রাখার চেষ্টা করুন।',
+          style: const TextStyle(fontSize: 13),
         ),
         actions: [
           ElevatedButton(
-            onPressed: () => Navigator.pop(context),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.teal,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
+            onPressed: () => Navigator.pop(context),
             child: const Text('ঠিক আছে'),
           ),
         ],
@@ -485,7 +738,7 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
                             final dist = filtered[idx];
                             final isSelected = dist.id == selectedDistrict.id;
                             final offsetStr = dist.offsetMinutes == 0
-                                ? 'ঢাকার সমসাময়িক'
+                                ? 'ঢাকার সমসাময়িক'
                                 : (dist.offsetMinutes > 0
                                     ? '+${toBanglaNumber(dist.offsetMinutes)} মিনিট'
                                     : '-${toBanglaNumber(dist.offsetMinutes.abs())} মিনিট');
@@ -498,11 +751,47 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
                               subtitle: Text('${dist.division} বিভাগ • $offsetStr', style: const TextStyle(fontSize: 12)),
                               trailing: isSelected ? const Icon(Icons.check_circle, color: Colors.teal) : null,
                               onTap: () async {
-                                final prefs = await SharedPreferences.getInstance();
-                                await prefs.setString('user_district_id', dist.id);
-                                setState(() => selectedDistrict = dist);
+                                final prefs =
+                                    await SharedPreferences.getInstance();
+
+                                final user =
+                                    FirebaseAuth.instance.currentUser;
+
+                                // Local Storage
+                                await prefs.setString(
+                                  'user_district_id',
+                                  dist.id,
+                                );
+
+                                // UI
+                                setState(() {
+                                  selectedDistrict = dist;
+                                });
+
+                                // Firestore
+                                if (user != null) {
+                                  try {
+                                    await FirebaseFirestore.instance
+                                        .collection('users')
+                                        .doc(user.uid)
+                                        .set({
+                                      'districtId': dist.id,
+                                      'districtName': dist.nameBn,
+                                      'updatedAt':
+                                          FieldValue.serverTimestamp(),
+                                    }, SetOptions(merge: true));
+                                  } catch (e) {
+                                    debugPrint(
+                                      'District Save Error: $e',
+                                    );
+                                  }
+                                }
+
                                 _updatePrayerTime();
-                                if (context.mounted) Navigator.pop(context);
+
+                                if (context.mounted) {
+                                  Navigator.pop(context);
+                                }
                               },
                             );
                           },
@@ -664,9 +953,9 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('চলমান ওয়াক্ত: $currentWaqt', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87)),
+                            Text('চলমান ওয়াক্ত: $currentWaqt', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87)),
                             const SizedBox(height: 2),
-                            const Text('ওয়াক্ত শেষ হতে সময় বাকি:', style: TextStyle(color: Colors.black54, fontSize: 11)),
+                            const Text('ওয়াক্ত শেষ হতে সময় বাকি:', style: TextStyle(color: Colors.black54, fontSize: 11)),
                           ],
                         ),
                         Container(
@@ -709,12 +998,12 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      '${toBanglaNumber(userStreakDays)} দিনের মুহাসাবা জমা হয়েছে',
+                      '${toBanglaNumber(userStreakDays)} দিনের মুহাসাবা জমা হয়েছে',
                       style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'আজকের টিক দেওয়া আমল: ${toBanglaNumber(completedCount)}/${toBanglaNumber(totalCount)} (${toBanglaNumber(percentage)}%)',
+                      'আজকের টিক দেওয়া আমল: ${toBanglaNumber(completedCount)}/${toBanglaNumber(totalCount)} (${toBanglaNumber(percentage)}%)',
                       style: const TextStyle(color: Colors.white70, fontSize: 12),
                     ),
                   ],
@@ -760,7 +1049,7 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: isDone ? Colors.teal.withOpacity(0.06) : Colors.black.withOpacity(0.02),
+                          color: isDone ? Colors.teal.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.02),
                           blurRadius: 6,
                           offset: const Offset(0, 2),
                         ),
@@ -821,7 +1110,7 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
                       : Icon(_isSubmittedToday ? Icons.lock : Icons.cloud_upload),
                   label: Text(
                     _isSubmittedToday
-                        ? 'আজকের আমল ইতোমধ্যে জমা দেওয়া হয়েছে'
+                        ? 'আজকের আমল ইতোমধ্যে জমা দেওয়া হয়েছে'
                         : 'আজকের আমল জমা দিন',
                     style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                   ),
@@ -957,7 +1246,7 @@ class _CelebrationConfettiDialogState extends State<CelebrationConfettiDialog>
                 ),
                 const SizedBox(height: 6),
                 const Text(
-                  'আপনি আজকের দিনের সকল আমল সফলভাবে সম্পন্ন করেছেন! শুকরিয়া',
+                  'আপনি আজকের দিনের সকল আমল সফলভাবে সম্পন্ন করেছেন! শুকরিয়া',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.black54, fontSize: 13),
                 ),
@@ -972,12 +1261,12 @@ class _CelebrationConfettiDialogState extends State<CelebrationConfettiDialog>
                   child: const Column(
                     children: [
                       Text(
-                        'تَقَبَّلَ اللَّهُ مِنَّا وَمِنْكُم صَالِحَ الأَعْمَال',
+                        'تَقَبَّلَ اللَّهُ مِنَّا وَمِنْكُم صَالِحَ الأَعْمَال',
                         style: TextStyle(color: Color(0xFF007A5E), fontSize: 16, fontWeight: FontWeight.bold),
                       ),
                       SizedBox(height: 4),
                       Text(
-                        '"আল্লাহ তায়ালা আমাদের ও আপনার সকল নেক আমল কবুল করুন।"',
+                        '"আল্লাহ তায়ালা আমাদের ও আপনার সকল নেক আমল কবুল করুন।"',
                         textAlign: TextAlign.center,
                         style: TextStyle(color: Colors.black54, fontSize: 11, fontStyle: FontStyle.italic),
                       ),

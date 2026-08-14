@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'amol_muhasaba_page.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class MuhasabaAuthGate extends StatelessWidget {
   const MuhasabaAuthGate({super.key});
@@ -50,70 +51,124 @@ class _MuhasabaLoginPageState extends State<MuhasabaLoginPage> {
     super.dispose();
   }
 
-  Future<void> _submit() async {
-    final email = _emailController.text.trim();
-    final password = _passwordController.text.trim();
-    final name = _nameController.text.trim();
+Future<void> _submit() async {
+  final email = _emailController.text.trim();
+  final password = _passwordController.text.trim();
+  final name = _nameController.text.trim();
 
-    if (email.isEmpty || password.isEmpty || (_isSignUp && name.isEmpty)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('অনুগ্রহ করে সবগুলো তথ্য পূরণ করুন')),
+  if (email.isEmpty || password.isEmpty || (_isSignUp && name.isEmpty)) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('অনুগ্রহ করে সবগুলো তথ্য পূরণ করুন'),
+      ),
+    );
+    return;
+  }
+
+  if (password.length < 6) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে'),
+      ),
+    );
+    return;
+  }
+
+  setState(() => _isLoading = true);
+
+  try {
+    final auth = FirebaseAuth.instance;
+    final firestore = FirebaseFirestore.instance;
+
+    if (_isSignUp) {
+      // ============================
+      // নতুন অ্যাকাউন্ট তৈরি
+      // ============================
+      final cred = await auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
       );
-      return;
+
+      final user = cred.user;
+
+      if (user != null) {
+        // Firebase Auth profile-এ নাম
+        await user.updateDisplayName(name);
+
+        // Firestore-এ User Profile তৈরি
+        await firestore.collection('users').doc(user.uid).set({
+          'uid': user.uid,
+          'name': name,
+          'email': email,
+          'districtId': 'dhaka',
+          'districtName': 'ঢাকা',
+          'createdAt': FieldValue.serverTimestamp(),
+          'lastLogin': FieldValue.serverTimestamp(),
+          'lastActive': null,
+          'lastSubmitTime': null,
+        });
+      }
+    } else {
+      // ============================
+      // Login
+      // ============================
+      final cred = await auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      final user = cred.user;
+
+      if (user != null) {
+        // Login-এর সময় lastLogin আপডেট
+        await firestore.collection('users').doc(user.uid).set({
+          'uid': user.uid,
+          'email': user.email ?? email,
+          'name': user.displayName ?? 'মুসলিম সাথী',
+          'lastLogin': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      }
+    }
+  } on FirebaseAuthException catch (e) {
+    String msg = 'লগইনে সমস্যা হয়েছে';
+
+    if (e.code == 'user-not-found') {
+      msg = 'এই ইমেইলে কোনো অ্যাকাউন্ট পাওয়া যায়নি';
+    } else if (e.code == 'wrong-password' ||
+        e.code == 'invalid-credential') {
+      msg = 'ভুল ইমেইল অথবা পাসওয়ার্ড দিয়েছেন';
+    } else if (e.code == 'email-already-in-use') {
+      msg = 'এই ইমেইল দিয়ে ইতোমধ্যে অ্যাকাউন্ট তৈরি করা হয়েছে';
+    } else if (e.code == 'invalid-email') {
+      msg = 'ইমেইল ফরম্যাট সঠিক নয়';
+    } else if (e.code == 'weak-password') {
+      msg = 'পাসওয়ার্ড আরও শক্তিশালী দিন';
+    } else {
+      msg = e.message ?? msg;
     }
 
-    if (password.length < 6) {
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে')),
+        SnackBar(
+          backgroundColor: Colors.red.shade800,
+          content: Text(msg),
+        ),
       );
-      return;
     }
-
-    setState(() => _isLoading = true);
-
-    try {
-      if (_isSignUp) {
-        final cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-          email: email,
-          password: password,
-        );
-        if (cred.user != null) {
-          await cred.user!.updateDisplayName(name);
-        }
-      } else {
-        await FirebaseAuth.instance.signInWithEmailAndPassword(
-          email: email,
-          password: password,
-        );
-      }
-    } on FirebaseAuthException catch (e) {
-      String msg = 'লগইনে সমস্যা হয়েছে';
-      if (e.code == 'user-not-found') {
-        msg = 'এই ইমেইলে কোনো অ্যাকাউন্ট পাওয়া যায়নি';
-      } else if (e.code == 'wrong-password') {
-        msg = 'ভুল পাসওয়ার্ড দিয়েছেন';
-      } else if (e.code == 'email-already-in-use') {
-        msg = 'এই ইমেইল দিয়ে ইতোমধ্যে অ্যাকাউন্ট তৈরি করা হয়েছে';
-      } else if (e.code == 'invalid-email') {
-        msg = 'ইমেইল ফরম্যাট সঠিক নয়';
-      } else {
-        msg = e.message ?? msg;
-      }
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(backgroundColor: Colors.red.shade800, content: Text(msg)),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('ত্রুটি: $e')),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
+  } catch (e) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('ত্রুটি: $e'),
+        ),
+      );
+    }
+  } finally {
+    if (mounted) {
+      setState(() => _isLoading = false);
     }
   }
+}
 
   @override
   Widget build(BuildContext context) {
