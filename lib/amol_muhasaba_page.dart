@@ -13,6 +13,17 @@ String toBanglaNumber(dynamic input) {
   return input.toString().split('').map((c) => bnDigits[c] ?? c).join();
 }
 
+String getBanglaFullDate(DateTime date) {
+  const List<String> bnMonths = [
+    'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন',
+    'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'
+  ];
+  final day = toBanglaNumber(date.day);
+  final month = bnMonths[date.month - 1];
+  final year = toBanglaNumber(date.year);
+  return 'আজ $day $month $year';
+}
+
 class DistrictData {
   final String id;
   final String nameBn;
@@ -469,7 +480,7 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
       await userRef.set({
         'uid': uid,
         'email': user.email ?? '',
-        'name': user.displayName ?? 'মুসলিম সাথী',
+        'name': user.displayName ?? 'নাম প্রকাশে অনিচ্ছুক',
         'districtId': selectedDistrict.id,
         'districtName': selectedDistrict.nameBn,
         'lastActive': dateKey,
@@ -738,7 +749,7 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
                             final dist = filtered[idx];
                             final isSelected = dist.id == selectedDistrict.id;
                             final offsetStr = dist.offsetMinutes == 0
-                                ? 'ঢাকার সমসাময়িক'
+                                ? 'ঢাকার সময়'
                                 : (dist.offsetMinutes > 0
                                     ? '+${toBanglaNumber(dist.offsetMinutes)} মিনিট'
                                     : '-${toBanglaNumber(dist.offsetMinutes.abs())} মিনিট');
@@ -834,8 +845,19 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
           foregroundColor: Colors.white,
           elevation: 1,
           centerTitle: true,
-          title: const Text('আমলের মুহাসাবা', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-          actions: [
+title: Column(
+  children: const [
+    Text(
+      'আমলের মুহাসাবা',
+      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+    ),
+    SizedBox(height: 2),
+    Text(
+      'আপনার দৈনন্দিন আমলের হিসাব করুন',
+      style: TextStyle(fontSize: 11, color: Colors.white70),
+    ),
+  ],
+),          actions: [
             IconButton(
               tooltip: 'লগআউট',
               icon: const Icon(Icons.logout_rounded),
@@ -941,9 +963,9 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
                           ),
                         ),
                         Text(
-                          'আজ: ${toBanglaNumber(DateTime.now().day)} তারিখ',
-                          style: const TextStyle(color: Colors.black54, fontSize: 12, fontWeight: FontWeight.bold),
-                        ),
+  getBanglaFullDate(DateTime.now()),
+  style: const TextStyle(color: Colors.black87, fontSize: 12, fontWeight: FontWeight.bold),
+),
                       ],
                     ),
                     const Divider(height: 20),
@@ -976,39 +998,92 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
               ),
               const SizedBox(height: 14),
 
-              // স্ট্রিক ব্যানার
+              // ----------------------------------------------------
+// নতুন স্ট্রিক কার্ড (ক্লিক করলে ইতিহাস দেখা যাবে)
+// ----------------------------------------------------
+InkWell(
+  onTap: () {
+    // এখানে আপনার ইতিহাস দেখানোর মেথড বা ডায়ালগ কল করতে পারেন
+  },
+  borderRadius: BorderRadius.circular(24),
+  child: Container(
+    decoration: BoxDecoration(
+      color: const Color(0xFF00897B),
+      borderRadius: BorderRadius.circular(24),
+      border: Border.all(color: Colors.teal.shade700, width: 1.2),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.teal.withOpacity(0.15),
+          blurRadius: 10,
+          offset: const Offset(0, 4),
+        ),
+      ],
+    ),
+    child: Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // গোল্ডেন ট্রফি শিল্ড আইকন
               Container(
-                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: [Color(0xFF007A5E), Color(0xFF005A45)]),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Column(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFBBF24),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Text(
-                        toBanglaNumber(userStreakDays),
-                        style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '${toBanglaNumber(userStreakDays)} দিনের মুহাসাবা জমা হয়েছে',
-                      style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'আজকের টিক দেওয়া আমল: ${toBanglaNumber(completedCount)}/${toBanglaNumber(totalCount)} (${toBanglaNumber(percentage)}%)',
-                      style: const TextStyle(color: Colors.white70, fontSize: 12),
+                width: 52,
+                height: 52,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFFBBF24),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Color(0x66FBBF24),
+                      blurRadius: 10,
+                      offset: Offset(0, 3),
                     ),
                   ],
                 ),
+                child: const Icon(Icons.emoji_events_rounded, color: Colors.white, size: 30),
               ),
+              const SizedBox(width: 14),
+              // বড় সাদা ডিজিট
+              Text(
+                toBanglaNumber(userStreakDays),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 48,
+                  fontWeight: FontWeight.w900,
+                  height: 1,
+                ),
+              ),
+            ],
+          ),
+        ),
+        // নিচের মিন্ট গ্রিন স্ট্রিপ (৫ দিন আমলের ধারাবাহিকতা)
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+          decoration: const BoxDecoration(
+            color: Color(0xFFD8F3E5),
+            borderRadius: BorderRadius.vertical(bottom: Radius.circular(23)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.lock_outline_rounded, size: 16, color: Color(0xFF004D40)),
+              const SizedBox(width: 6),
+              Text(
+                '${toBanglaNumber(userStreakDays)} দিন আমলের ধারাবাহিকতা',
+                style: const TextStyle(
+                  color: Color(0xFF004D40),
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  ),
+),
               const SizedBox(height: 16),
 
               Row(
@@ -1041,7 +1116,7 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
                   return Container(
                     decoration: BoxDecoration(
                       // টিক দিলে হালকা সবুজ (0xFFE8F5E9 / green.shade50), না দিলে সাদা
-                      color: isDone ? const Color(0xFFE8F5E9) : Colors.white,
+                      color: isDone ? const Color(0xFF007A5E) : Colors.white,
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
                         color: isDone ? Colors.teal.shade700 : Colors.grey.shade200,
@@ -1067,17 +1142,20 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
                               });
                             },
                       title: Text(
-                        amol.title,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                          color: isDone ? const Color(0xFF004D40) : Colors.black87,
-                        ),
-                      ),
-                      subtitle: Text(
-                        amol.subtitle,
-                        style: TextStyle(fontSize: 12, color: isDone ? Colors.black54 : Colors.grey.shade600),
-                      ),
+  amol.title,
+  style: TextStyle(
+    fontWeight: FontWeight.bold,
+    fontSize: 16,
+    color: isDone ? Colors.white : Colors.black87,
+  ),
+),
+subtitle: Text(
+  amol.subtitle,
+  style: TextStyle(
+    fontSize: 12,
+    color: isDone ? Colors.white70 : Colors.grey.shade600,
+  ),
+),
                       secondary: amol.category == 'nafl_zikr'
                           ? Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
