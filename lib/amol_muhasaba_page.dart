@@ -119,7 +119,6 @@ class AmolMuhasabaPage extends StatefulWidget {
 }
 
 class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
-  User? _currentUser;
   int userStreakDays = 0;
   bool _isSubmittedToday = false;
   bool _isSaving = false;
@@ -149,7 +148,6 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
   @override
   void initState() {
     super.initState();
-    _currentUser = FirebaseAuth.instance.currentUser;
     _loadUserPreferencesAndCloudData();
     _updatePrayerTime();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) => _updatePrayerTime());
@@ -164,24 +162,44 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
   Future<void> _loadUserPreferencesAndCloudData() async {
     final prefs = await SharedPreferences.getInstance();
     final savedDistrictId = prefs.getString('user_district_id') ?? 'dhaka';
+    final todayKey = DateTime.now().toIso8601String().substring(0, 10);
 
-    if (_currentUser != null) {
+    final localSubmitted = prefs.getBool('submitted_$todayKey') ?? false;
+    final localStreak = prefs.getInt('user_streak_days') ?? 0;
+
+    for (var amol in amols) {
+      if (prefs.containsKey('amol_${todayKey}_${amol.id}')) {
+        amol.isCompleted = prefs.getBool('amol_${todayKey}_${amol.id}') ?? false;
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _isSubmittedToday = localSubmitted;
+        userStreakDays = localStreak;
+        selectedDistrict = all64Districts.firstWhere(
+          (d) => d.id == savedDistrictId,
+          orElse: () => all64Districts[0],
+        );
+      });
+    }
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
       try {
-        final dateKey = DateTime.now().toIso8601String().substring(0, 10);
-        
         final countSnapshot = await FirebaseFirestore.instance
             .collection('users')
-            .doc(_currentUser!.uid)
+            .doc(user.uid)
             .collection('muhasaba_records')
             .get();
 
-        final totalSubmittedDays = countSnapshot.docs.length;
+        final totalCount = countSnapshot.docs.length;
 
         final todayDoc = await FirebaseFirestore.instance
             .collection('users')
-            .doc(_currentUser!.uid)
+            .doc(user.uid)
             .collection('muhasaba_records')
-            .doc(dateKey)
+            .doc(todayKey)
             .get();
 
         if (todayDoc.exists && todayDoc.data() != null) {
@@ -199,40 +217,67 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
 
         if (mounted) {
           setState(() {
-            userStreakDays = totalSubmittedDays;
+            userStreakDays = totalCount > 0 ? totalCount : userStreakDays;
           });
         }
       } catch (e) {
         debugPrint('Firestore Load Error: $e');
       }
     }
-
-    if (mounted) {
-      setState(() {
-        selectedDistrict = all64Districts.firstWhere(
-          (d) => d.id == savedDistrictId,
-          orElse: () => all64Districts[0],
-        );
-      });
-    }
   }
 
   Future<void> _submitTodayAmol() async {
-    if (_currentUser == null) return;
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('অনুগ্রহ করে প্রথমে লগইন করুন')),
+      );
+      return;
+    }
 
     setState(() => _isSaving = true);
-    try {
-      final dateKey = DateTime.now().toIso8601String().substring(0, 10);
-      final Map<String, bool> taskMap = {
-        for (var item in amols) item.id: item.isCompleted
-      };
 
-      final completedCount = amols.where((a) => a.isCompleted).length;
-      final totalCount = amols.length;
+    final dateKey = DateTime.now().toIso8601String().substring(0, 10);
+    final Map<String, bool> taskMap = {
+      for (var item in amols) item.id: item.isCompleted
+    };
+
+    final completedCount = amols.where((a) => a.isCompleted).length;
+    final totalCount = amols.length;
+
+    // ১. লোকাল ফোনে সাথে সাথে সেভ
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('submitted_$dateKey', true);
+    for (var entry in taskMap.entries) {
+      await prefs.setBool('amol_${dateKey}_${entry.key}', entry.value);
+    }
+    final newStreak = userStreakDays + 1;
+    await prefs.setInt('user_streak_days', newStreak);
+
+    setState(() {
+      _isSubmittedToday = true;
+      userStreakDays = newStreak;
+      _isSaving = false;
+    });
+
+    if (completedCount == totalCount) {
+      _showCelebrationDialog();
+    } else {
+      _showStandardThankYouDialog(completedCount, totalCount);
+    }
+
+    // ২. ফায়ারবেস ক্লাউডে সেভ
+    try {
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+        'uid': user.uid,
+        'email': user.email,
+        'name': user.displayName ?? 'মুসলিম সাথী',
+        'lastActiveDate': dateKey,
+      }, SetOptions(merge: true));
 
       await FirebaseFirestore.instance
           .collection('users')
-          .doc(_currentUser!.uid)
+          .doc(user.uid)
           .collection('muhasaba_records')
           .doc(dateKey)
           .set({
@@ -241,27 +286,12 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
         'completedCount': completedCount,
         'totalCount': totalCount,
         'isSubmitted': true,
-        'submittedAt': FieldValue.serverTimestamp(),
+        'submittedAt': DateTime.now().toIso8601String(),
       }, SetOptions(merge: true));
 
-      setState(() {
-        _isSubmittedToday = true;
-        userStreakDays += 1;
-      });
-
-      if (completedCount == totalCount) {
-        _showCelebrationDialog();
-      } else {
-        _showStandardThankYouDialog(completedCount, totalCount);
-      }
+      debugPrint('Firestore-এ সফলভাবে জমা হয়েছে!');
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('ডাটা সেভ করতে ব্যর্থ: $e')),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isSaving = false);
+      debugPrint('Firestore background sync error: $e');
     }
   }
 
@@ -297,7 +327,6 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
     );
   }
 
-  // ⭐ রঙিন কনফেটি রেইন সহ স্পেশাল মোবারকবাদ ডায়ালগ
   void _showCelebrationDialog() {
     HapticFeedback.heavyImpact();
     showDialog(
@@ -482,6 +511,8 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
         ? amols
         : amols.where((a) => a.category == selectedFilter).toList();
 
+    final user = FirebaseAuth.instance.currentUser;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF6F8F7),
       appBar: AppBar(
@@ -523,7 +554,7 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (_currentUser != null)
+            if (user != null)
               Container(
                 margin: const EdgeInsets.only(bottom: 12),
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -538,7 +569,7 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'ব্যবহারকারী: ${_currentUser?.displayName ?? _currentUser?.email ?? "মুসলিম ভাই"}',
+                        'ব্যবহারকারী: ${user.displayName ?? user.email ?? "মুসলিম ভাই"}',
                         style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black87),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -771,9 +802,6 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
   }
 }
 
-/// ---------------------------------------------------------------------------
-/// রঙিন কনফেটি সহ সেলিব্রেশন ডায়ালগ
-/// ---------------------------------------------------------------------------
 class CelebrationConfettiDialog extends StatefulWidget {
   const CelebrationConfettiDialog({super.key});
 
