@@ -148,7 +148,7 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
   @override
   void initState() {
     super.initState();
-    _loadUserPreferencesAndCloudData();
+    _loadCurrentUserData();
     _updatePrayerTime();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) => _updatePrayerTime());
   }
@@ -159,17 +159,36 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
     super.dispose();
   }
 
-  Future<void> _loadUserPreferencesAndCloudData() async {
+  // ইউজার আইডি ভিত্তিক স্বতন্ত্র ডাটা লোড
+  Future<void> _loadCurrentUserData() async {
+    final user = FirebaseAuth.instance.currentUser;
     final prefs = await SharedPreferences.getInstance();
     final savedDistrictId = prefs.getString('user_district_id') ?? 'dhaka';
     final todayKey = DateTime.now().toIso8601String().substring(0, 10);
 
-    final localSubmitted = prefs.getBool('submitted_$todayKey') ?? false;
-    final localStreak = prefs.getInt('user_streak_days') ?? 0;
+    // সব আমল রিসেট (আগের ইউজারের ডাটা মুছে ফ্রেশ করা)
+    for (var amol in amols) {
+      amol.isCompleted = false;
+    }
+
+    if (user == null) {
+      if (mounted) {
+        setState(() {
+          _isSubmittedToday = false;
+          userStreakDays = 0;
+        });
+      }
+      return;
+    }
+
+    final uid = user.uid;
+    // ১. এই নির্দিষ্ট ইউজারের লোকাল ডাটা
+    final localSubmitted = prefs.getBool('sub_${uid}_$todayKey') ?? false;
+    final localStreak = prefs.getInt('streak_$uid') ?? 0;
 
     for (var amol in amols) {
-      if (prefs.containsKey('amol_${todayKey}_${amol.id}')) {
-        amol.isCompleted = prefs.getBool('amol_${todayKey}_${amol.id}') ?? false;
+      if (prefs.containsKey('amol_${uid}_${todayKey}_${amol.id}')) {
+        amol.isCompleted = prefs.getBool('amol_${uid}_${todayKey}_${amol.id}') ?? false;
       }
     }
 
@@ -184,48 +203,42 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
       });
     }
 
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      try {
-        final countSnapshot = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .collection('muhasaba_records')
-            .get();
+    // ২. ফায়ারস্টোর থেকে সরাসরি ক্লাউড ডাটা সিঙ্ক
+    try {
+      final recordsRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .collection('muhasaba_records');
 
-        final totalCount = countSnapshot.docs.length;
+      final countSnap = await recordsRef.get();
+      final totalDays = countSnap.docs.length;
 
-        final todayDoc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .collection('muhasaba_records')
-            .doc(todayKey)
-            .get();
+      final todaySnap = await recordsRef.doc(todayKey).get();
 
-        if (todayDoc.exists && todayDoc.data() != null) {
-          final data = todayDoc.data()!;
-          final Map<String, dynamic>? tasks = data['tasks'];
-          if (tasks != null) {
-            for (var amol in amols) {
-              if (tasks.containsKey(amol.id)) {
-                amol.isCompleted = tasks[amol.id] == true;
-              }
+      if (todaySnap.exists && todaySnap.data() != null) {
+        final data = todaySnap.data()!;
+        final Map<String, dynamic>? tasks = data['tasks'];
+        if (tasks != null) {
+          for (var amol in amols) {
+            if (tasks.containsKey(amol.id)) {
+              amol.isCompleted = tasks[amol.id] == true;
             }
           }
-          _isSubmittedToday = data['isSubmitted'] ?? true;
         }
-
-        if (mounted) {
-          setState(() {
-            userStreakDays = totalCount > 0 ? totalCount : userStreakDays;
-          });
-        }
-      } catch (e) {
-        debugPrint('Firestore Load Error: $e');
+        _isSubmittedToday = data['isSubmitted'] ?? true;
       }
+
+      if (mounted) {
+        setState(() {
+          userStreakDays = totalDays;
+        });
+      }
+    } catch (e) {
+      debugPrint('Firestore Fetch Error: $e');
     }
   }
 
+// বাটন ক্লিকে ফায়ারস্টোরে সরাসরি ক্লাউড ডাটা সেভ
   Future<void> _submitTodayAmol() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
@@ -237,6 +250,7 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
 
     setState(() => _isSaving = true);
 
+    final uid = user.uid;
     final dateKey = DateTime.now().toIso8601String().substring(0, 10);
     final Map<String, bool> taskMap = {
       for (var item in amols) item.id: item.isCompleted
@@ -245,39 +259,20 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
     final completedCount = amols.where((a) => a.isCompleted).length;
     final totalCount = amols.length;
 
-    // ১. লোকাল ফোনে সাথে সাথে সেভ
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('submitted_$dateKey', true);
-    for (var entry in taskMap.entries) {
-      await prefs.setBool('amol_${dateKey}_${entry.key}', entry.value);
-    }
-    final newStreak = userStreakDays + 1;
-    await prefs.setInt('user_streak_days', newStreak);
-
-    setState(() {
-      _isSubmittedToday = true;
-      userStreakDays = newStreak;
-      _isSaving = false;
-    });
-
-    if (completedCount == totalCount) {
-      _showCelebrationDialog();
-    } else {
-      _showStandardThankYouDialog(completedCount, totalCount);
-    }
-
-    // ২. ফায়ারবেস ক্লাউডে সেভ
     try {
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-        'uid': user.uid,
-        'email': user.email,
+      // ১. ইউজারের প্রোফাইল ফায়ারস্টোরে সরাসরি সেভ
+      await FirebaseFirestore.instance.collection('users').doc(uid).set({
+        'uid': uid,
+        'email': user.email ?? '',
         'name': user.displayName ?? 'মুসলিম সাথী',
-        'lastActiveDate': dateKey,
+        'lastActive': dateKey,
+        'lastSubmitTime': DateTime.now().toIso8601String(),
       }, SetOptions(merge: true));
 
+      // ২. আমল রেকর্ড সরাসরি ফায়ারস্টোরে সেভ
       await FirebaseFirestore.instance
           .collection('users')
-          .doc(user.uid)
+          .doc(uid)
           .collection('muhasaba_records')
           .doc(dateKey)
           .set({
@@ -289,9 +284,40 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
         'submittedAt': DateTime.now().toIso8601String(),
       }, SetOptions(merge: true));
 
-      debugPrint('Firestore-এ সফলভাবে জমা হয়েছে!');
+      // ৩. সফল হলে লোকাল ফোনেও সেভ করা
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('sub_${uid}_$dateKey', true);
+      for (var entry in taskMap.entries) {
+        await prefs.setBool('amol_${uid}_${dateKey}_${entry.key}', entry.value);
+      }
+      final newStreak = userStreakDays + 1;
+      await prefs.setInt('streak_$uid', newStreak);
+
+      if (mounted) {
+        setState(() {
+          _isSubmittedToday = true;
+          userStreakDays = newStreak;
+          _isSaving = false;
+        });
+
+        // পপআপ দেখানো
+        if (completedCount == totalCount) {
+          _showCelebrationDialog();
+        } else {
+          _showStandardThankYouDialog(completedCount, totalCount);
+        }
+      }
     } catch (e) {
-      debugPrint('Firestore background sync error: $e');
+      debugPrint('সেভ এরর: $e');
+      if (mounted) {
+        setState(() => _isSaving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('সেভ করতে সমস্যা: $e'),
+            backgroundColor: Colors.red.shade800,
+          ),
+        );
+      }
     }
   }
 
@@ -309,7 +335,7 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
           ],
         ),
         content: Text(
-          'আলহামদুলিল্লাহ! আজকের দিনের ${toBanglaNumber(done)}টি আমল সফলভাবে ফায়ারবেস ক্লাউডে সংরক্ষিত হয়েছে। বাকি আমলগুলোও যথাসময়ে আদায় করার তাওফিক দান করুন।',
+          'আলহামদুলিল্লাহ! আজকের দিনের ${toBanglaNumber(done)}টি আমল সফলভাবে সম্পন্ন হয়েছে। বাকি আমলগুলোও যথাসময়ে আদায় চেষ্টা করুন।',
           style: const TextStyle(fontSize: 14, color: Colors.black87),
         ),
         actions: [
@@ -355,7 +381,7 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
       waqtName = 'ফজর';
       targetEnd = sunrise.toDouble();
     } else if (currentMinutes >= sunrise && currentMinutes < dhuhrStart) {
-      waqtName = 'চাশত / ইশরাক';
+      waqtName = 'চাশত/ইশরাক';
       targetEnd = dhuhrStart.toDouble();
     } else if (currentMinutes >= dhuhrStart && currentMinutes < asrStart) {
       waqtName = 'যোহর';
@@ -437,7 +463,7 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
                       ),
                       const SizedBox(height: 16),
                       const Text(
-                        'আপনার জেলা নির্বাচন করুন (৬৪ জেলা)',
+                        'আপনার জেলা নির্বাচন করুন',
                         style: TextStyle(
                           color: Colors.teal,
                           fontSize: 18,
@@ -543,6 +569,10 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
               );
 
               if (confirm == true) {
+                // সব ফিল্ড ফ্রেশ করে লগআউট
+                for (var amol in amols) {
+                  amol.isCompleted = false;
+                }
                 await AuthService.signOut();
               }
             },
@@ -569,7 +599,7 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'ব্যবহারকারী: ${user.displayName ?? user.email ?? "মুসলিম ভাই"}',
+                        'ব্যবহারকারী: ${user.displayName ?? user.email ?? "নাম প্রকাশে অনিচ্ছুক"}',
                         style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black87),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -896,7 +926,7 @@ class _CelebrationConfettiDialogState extends State<CelebrationConfettiDialog>
                 ),
                 const SizedBox(height: 6),
                 const Text(
-                  'আজকের দিনের সকল আমল সফলভাবে সম্পন্ন করে ক্লাউডে জমা দিয়েছেন!',
+                  'আপনি আজকের দিনের সকল আমল সফলভাবে সম্পন্ন করেছেন! শুকরিয়া',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.black54, fontSize: 13),
                 ),
@@ -960,7 +990,7 @@ class ConfettiParticle {
     x = (rand % 100) / 100.0;
     y = -0.1 - ((rand % 50) / 100.0);
     vx = ((rand % 10) - 5) / 1000.0;
-    vy = 0.005 + ((rand % 10) / 1000.0);
+    vy = 0.005 + ((rand % 10) / 100.0);
     size = 6.0 + (rand % 6);
   }
 
