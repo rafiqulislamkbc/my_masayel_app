@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import 'helpers.dart';
+import 'pages/notebook_page.dart';
 
 class MasalaDetailPage extends StatefulWidget {
   final Map<String, dynamic> masala;
@@ -163,6 +164,27 @@ class _MasalaDetailPageState extends State<MasalaDetailPage> {
       appBar: AppBar(
         title: Text('মাসআলা নং: $masalaIdBangla'),
         actions: [
+          IconButton(
+  icon: const Icon(Icons.bookmark_add_outlined),
+  tooltip: 'নোটবইতে সংরক্ষণ করুন',
+  onPressed: () {
+    // প্রশ্ন, উত্তর ও রেফারেন্স একসাথে গুছিয়ে নোটে সেভ হবে
+    final noteBody = '''
+প্রশ্ন: ${masala['question'] ?? ''}
+
+উত্তর: ${masala['answer'] ?? ''}
+
+রেফারেন্স: ${masala['reference'] ?? 'উল্লেখ নেই'}
+'''.trim();
+
+    NotebookPage.saveQuickNote(
+      context: context,
+      title: 'মাসআলা: ${masala['title'] ?? 'শিরোনামহীন'}',
+      content: noteBody,
+      category: 'মাসআলা নোট',
+    );
+  },
+),
           IconButton(
             icon: const Icon(Icons.copy),
             tooltip: 'কপি করুন',

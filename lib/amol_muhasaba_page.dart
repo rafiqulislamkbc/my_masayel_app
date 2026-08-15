@@ -150,6 +150,7 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
     AmolItem(id: 'maghrib', title: 'মাগরিব', subtitle: '৩ রাকাত ফরজ ও ২ রাকাত সুন্নাত', category: 'farz'),
     AmolItem(id: 'isha', title: 'এশা', subtitle: '৪ রাকাত ফরজ ও বিতর সালাত', category: 'farz'),
     AmolItem(id: 'quran', title: 'কুরআন তিলাওয়াত', subtitle: 'কমপক্ষে ১০ আয়াত বা অর্থসহ ১ রুকু', category: 'nafl_zikr'),
+    AmolItem(id: 'q&a', title: 'প্রশ্নোত্তর পাঠ', subtitle: 'এই অ্যাপ থেকে কমপক্ষে ৫টি', category: 'nafl_zikr'),
     AmolItem(id: 'chasht', title: 'চাশত সালাত (সালাতুদ দুহা)', subtitle: 'সূর্য ওঠার পর ২ থেকে ৪ রাকাত সালাত', category: 'nafl_zikr'),
     AmolItem(id: 'awwabin', title: 'আওয়াবিন সালাত', subtitle: 'মাগরিবের পর ৬ রাকাত নফল সালাত', category: 'nafl_zikr'),
     AmolItem(id: 'durood', title: 'দরুদ শরীফ (কমপক্ষে ১০০ বার)', subtitle: 'রাসূলুল্লাহ (ﷺ)-এর ওপর ১০০ বার দরুদ পাঠ', category: 'nafl_zikr'),
@@ -206,7 +207,7 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
         await userRef.set({
           'uid': uid,
           'email': user.email ?? '',
-          'name': user.displayName ?? 'মুসলিম সাথী',
+          'name': user.displayName ?? 'নাম প্রকাশে অনিচ্ছুক',
           'createdAt': FieldValue.serverTimestamp(),
           'lastLogin': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
@@ -663,7 +664,7 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
     final textSecondary = isDark ? const Color(0xFF9CA3AF) : const Color(0xFF4B5563);
     final timerCardBg = isDark ? const Color(0xFF16211D) : const Color(0xFFEBF7F2);
     final timerCardBorder = isDark ? const Color(0xFF23352E) : const Color(0xFFC7EADB);
-    final topBarBg = isDark ? const Color(0xFF131D19) : const Color(0xFF007A5E);
+    final topBarBg = isDark ? const Color(0xFF131D19) : Colors.teal;
 
     final filteredAmols = selectedFilter == 'all'
         ? amols
@@ -678,8 +679,8 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
-        title: Column(
-          children: const [
+        title: const Column(
+          children: [
             Text(
               'আমলের মুহাসাবা',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
@@ -754,7 +755,7 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'ব্যবহারকারী: ${user.displayName ?? user.email ?? "মুসলিম সাথী"}',
+                        'ব্যবহারকারী: ${user.displayName ?? user.email ?? "নাম প্রকাশে অনিচ্ছুক"}',
                         style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: textPrimary),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -773,7 +774,7 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
                 border: Border.all(color: timerCardBorder, width: 1.2),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(isDark ? 0.2 : 0.02),
+                    color: Colors.black.withValues(alpha:isDark ? 0.2 : 0.02),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -832,7 +833,7 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
                           borderRadius: BorderRadius.circular(12),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF007A5E).withOpacity(0.3),
+                              color: const Color(0xFF007A5E).withValues(alpha:0.3),
                               blurRadius: 6,
                               offset: const Offset(0, 2),
                             ),
@@ -856,12 +857,12 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
               borderRadius: BorderRadius.circular(24),
               child: Container(
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF00685E) : const Color(0xFF00897B),
+                  color: isDark ? const Color.fromARGB(5, 7, 7, 7) : const Color(0xFF00897B),
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(color: const Color(0xFF005A4E), width: 1.2),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(isDark ? 0.35 : 0.15),
+                      color: Colors.black.withValues(alpha:isDark ? 0.35 : 0.15),
                       blurRadius: 12,
                       offset: const Offset(0, 4),
                     ),
@@ -984,8 +985,8 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
                         boxShadow: [
                           BoxShadow(
                             color: isDone
-                                ? const Color(0xFF007A5E).withOpacity(0.2)
-                                : Colors.black.withOpacity(isDark ? 0.15 : 0.02),
+                                ? const Color(0xFF007A5E).withValues(alpha:0.2)
+                                : Colors.black.withValues(alpha:isDark ? 0.15 : 0.02),
                             blurRadius: isDone ? 8 : 4,
                             offset: const Offset(0, 2),
                           ),
@@ -1017,12 +1018,12 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
                                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                         decoration: BoxDecoration(
                                           color: isDone
-                                              ? Colors.white.withOpacity(0.2)
+                                              ? Colors.white.withValues(alpha:0.2)
                                               : (isDark ? const Color(0xFF1E3A2F) : const Color(0xFFECFDF5)),
                                           borderRadius: BorderRadius.circular(6),
                                           border: Border.all(
                                             color: isDone
-                                                ? Colors.white.withOpacity(0.3)
+                                                ? Colors.white.withValues(alpha:0.3)
                                                 : (isDark ? const Color(0xFF285443) : const Color(0xFFA7F3D0)),
                                           ),
                                         ),
@@ -1070,7 +1071,7 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
                               boxShadow: isDone
                                   ? [
                                       BoxShadow(
-                                        color: Colors.black.withOpacity(0.1),
+                                        color: Colors.black.withValues(alpha:0.1),
                                         blurRadius: 4,
                                         offset: const Offset(0, 2),
                                       ),
@@ -1155,7 +1156,7 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: const Color(0xFF007A5E).withOpacity(0.25),
+                    color: const Color(0xFF007A5E).withValues(alpha:0.25),
                     blurRadius: 6,
                     offset: const Offset(0, 2),
                   ),
