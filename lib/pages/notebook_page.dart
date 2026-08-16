@@ -30,7 +30,7 @@ class NotebookPage extends StatefulWidget {
       'updatedAt': timestamp,
     };
 
-    // ১. লোকাল স্টোরেজে স্থায়ী সংরক্ষণ (অফলাইন ও অনলাইনে আজীবন সংরক্ষিত থাকবে)
+    // ১. লোকাল স্টোরেজে স্থায়ী সংরক্ষণ (অফলাইনেও আজীবন থাকবে)
     try {
       final prefs = await SharedPreferences.getInstance();
       List<String> rawList = prefs.getStringList('local_user_notes') ?? [];
@@ -40,13 +40,17 @@ class NotebookPage extends StatefulWidget {
       debugPrint('Local save error: $e');
     }
 
-    // ২. ফায়ারবেস ক্লাউডে সিঙ্ক (যদি ইউজার লগইন থাকে বা অনলাইন থাকে)
+    // ২. 🌟 ফায়ারবেসে ইউজারের আন্ডারে notes সাব-কালেকশনে জমা হবে (যা কনসোলে দেখা যাবে)
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        await FirebaseFirestore.instance.collection('notes').add({
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('notes')
+            .doc(localId)
+            .set({
           'userId': user.uid,
-          'localId': localId,
           'title': cleanTitle,
           'content': content,
           'category': cleanCategory,
@@ -57,18 +61,28 @@ class NotebookPage extends StatefulWidget {
         });
       }
     } catch (e) {
-      debugPrint('Cloud sync error (safely handled): $e');
+      debugPrint('Cloud save error: $e');
     }
 
     if (context.mounted) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            '"$cleanTitle" সফলভাবে নোটবইতে সংরক্ষিত হয়েছে!',
-            style: const TextStyle(fontFamily: 'SolaimanLipi'),
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle, color: Colors.white, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '"$cleanTitle" সফলভাবে নোটবইতে সংরক্ষিত হয়েছে!',
+                  style: const TextStyle(fontFamily: 'SolaimanLipi', fontSize: 14),
+                ),
+              ),
+            ],
           ),
-          backgroundColor: Colors.teal,
+          backgroundColor: Colors.teal.shade800,
           behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           duration: const Duration(seconds: 2),
         ),
       );
@@ -90,7 +104,6 @@ class _NotebookPageState extends State<NotebookPage> {
     _loadNotes();
   }
 
-  // নোটগুলো লোড করার মেথড
   Future<void> _loadNotes() async {
     setState(() => _isLoading = true);
     final prefs = await SharedPreferences.getInstance();
@@ -103,13 +116,41 @@ class _NotebookPageState extends State<NotebookPage> {
       } catch (_) {}
     }
 
+    // ক্লাউড থেকে সিঙ্ক
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        final snap = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('notes')
+            .where('isDeleted', isEqualTo: false)
+            .get();
+
+        for (var doc in snap.docs) {
+          final data = doc.data();
+          final id = doc.id;
+          if (!loaded.any((n) => n['id'] == id)) {
+            loaded.add({
+              'id': id,
+              'title': data['title'] ?? '',
+              'content': data['content'] ?? '',
+              'category': data['category'] ?? '',
+              'color': data['color'] ?? 'teal',
+            });
+          }
+        }
+      } catch (e) {
+        debugPrint('Cloud fetch error: $e');
+      }
+    }
+
     setState(() {
       _notes = loaded;
       _isLoading = false;
     });
   }
 
-  // নোট সেভ বা আপডেট
   Future<void> _saveNoteToList({
     String? id,
     required String title,
@@ -119,12 +160,11 @@ class _NotebookPageState extends State<NotebookPage> {
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final now = DateTime.now().millisecondsSinceEpoch;
+    final noteId = id ?? 'note_$now';
 
     if (id == null) {
-      // নতুন নোট
-      final newId = 'note_$now';
       final item = {
-        'id': newId,
+        'id': noteId,
         'title': title.isEmpty ? 'শিরোনামহীন নোট' : title,
         'content': content,
         'category': category ?? 'কাস্টম নোট',
@@ -134,7 +174,6 @@ class _NotebookPageState extends State<NotebookPage> {
       };
       _notes.insert(0, item);
     } else {
-      // এডিট/আপডেট
       final index = _notes.indexWhere((n) => n['id'] == id);
       if (index != -1) {
         _notes[index]['title'] = title;
@@ -146,9 +185,31 @@ class _NotebookPageState extends State<NotebookPage> {
     final rawList = _notes.map((n) => jsonEncode(n)).toList();
     await prefs.setStringList('local_user_notes', rawList);
     setState(() {});
+
+    // ফায়ারবেসে আপডেট
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('notes')
+            .doc(noteId)
+            .set({
+          'userId': user.uid,
+          'title': title.isEmpty ? 'শিরোনামহীন নোট' : title,
+          'content': content,
+          'category': category ?? 'কাস্টম নোট',
+          'color': color ?? 'teal',
+          'isDeleted': false,
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      } catch (e) {
+        debugPrint('Cloud sync error: $e');
+      }
+    }
   }
 
-  // নোট ডিলিট
   Future<void> _deleteNote(String id) async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
@@ -156,6 +217,19 @@ class _NotebookPageState extends State<NotebookPage> {
     });
     final rawList = _notes.map((n) => jsonEncode(n)).toList();
     await prefs.setStringList('local_user_notes', rawList);
+
+    // ফায়ারবেসে সফট ডিলিট
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('notes')
+            .doc(id)
+            .delete();
+      } catch (_) {}
+    }
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -223,7 +297,6 @@ class _NotebookPageState extends State<NotebookPage> {
       ),
       body: Column(
         children: [
-          // সার্চ বার
           Padding(
             padding: const EdgeInsets.all(12),
             child: TextField(
@@ -250,8 +323,6 @@ class _NotebookPageState extends State<NotebookPage> {
               ),
             ),
           ),
-
-          // নোট লিস্ট
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator(color: Colors.teal))
@@ -262,11 +333,7 @@ class _NotebookPageState extends State<NotebookPage> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: const [
-                              Icon(
-                                Icons.bookmark_border,
-                                size: 64,
-                                color: Colors.grey,
-                              ),
+                              Icon(Icons.bookmark_border, size: 64, color: Colors.grey),
                               SizedBox(height: 12),
                               Text(
                                 'কোনো সংরক্ষিত নোট নেই',
@@ -452,7 +519,6 @@ class _NotebookPageState extends State<NotebookPage> {
     );
   }
 
-  // নোটে ক্লিক করলে বিস্তারিত পড়ার পপআপ
   void _openNoteDetailModal(Map<String, dynamic> note) {
     showModalBottomSheet(
       context: context,
@@ -559,7 +625,6 @@ class _NotebookPageState extends State<NotebookPage> {
     );
   }
 
-  // নোট তৈরি বা এডিট করার ফর্ম
   void _openNoteEditor(BuildContext context, {Map<String, dynamic>? note}) {
     final isEditing = note != null;
     final titleCtrl = TextEditingController(text: isEditing ? note['title'] : '');

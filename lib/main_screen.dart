@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'database_helper.dart'; 
+import 'database_helper.dart';
 import 'home_page.dart';
 import 'masala_detail_page.dart';
-import 'muhasaba_auth_gate.dart';
-import 'pages/notebook_page.dart'; // নোটবই পেজ ইমপোর্ট
+import 'amol_muhasaba_page.dart'; // সরাসরি মুহাসাবা পেজ
+import 'muhasaba_auth_gate.dart';  // অ্যাকাউন্ট / লগইন গেট
+import 'pages/notebook_page.dart'; // নোটবই পেজ
 
 class MainScreen extends StatefulWidget {
   final int initialIndex;
@@ -17,12 +18,13 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   late int _currentIndex;
 
-  // ৪টি পেইজের তালিকা (অনুদানের স্থানে নোটবই)
+  // ৫টি পেইজের তালিকা
   final List<Widget> _pages = [
     const HomePage(),          // 0: হোম
-    const MuhasabaAuthGate(),  // 1: মুহাসাবা
-    const SizedBox(),          // 2: সর্বশেষ পঠিত (ডায়ালগ/পুশ পেজ)
-    const NotebookPage(),      // 3: নোটবই ও সংরক্ষিত তথ্য
+    const AmolMuhasabaPage(),  // 1: সরাসরি মুহাসাবা পেজ (লগইন ব্যারিয়ার ছাড়া)
+    const NotebookPage(),      // 2: নোটবই ও সংরক্ষিত তথ্য
+    const SizedBox(),          // 3: সর্বশেষ পঠিত (অন-ক্লিক পুশ হবে)
+    const MuhasabaAuthGate(),  // 4: অ্যাকাউন্ট / লগইন ও প্রোফাইল ব্যবস্থাপনা
   ];
 
   @override
@@ -59,6 +61,7 @@ class _MainScreenState extends State<MainScreen> {
             'কোনো সর্বশেষ পঠিত মাসআলা পাওয়া যায়নি!',
             style: TextStyle(fontFamily: 'SolaimanLipi'),
           ),
+          duration: Duration(seconds: 2),
         ),
       );
     }
@@ -67,29 +70,23 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _currentIndex == 0
-          ? _pages[0]
-          : _currentIndex == 1
-              ? _pages[1]
-              : _pages[3], // ৩ নম্বর ইন্ডেক্সে নোটবই লোড হবে
+      body: _currentIndex == 3 ? _pages[0] : _pages[_currentIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) async {
-          if (index == 0) {
-            setState(() => _currentIndex = 0);
-          } else if (index == 1) {
-            setState(() => _currentIndex = 1);
-          } else if (index == 2) {
+          if (index == 3) {
+            // সর্বশেষ পঠিত মাসআলা ওপেন হবে
             await _openLastRead(context);
-          } else if (index == 3) {
-            setState(() => _currentIndex = 3);
+          } else {
+            setState(() => _currentIndex = index);
           }
         },
         type: BottomNavigationBarType.fixed,
+        backgroundColor: Colors.white,
         selectedItemColor: Colors.teal,
-        unselectedItemColor: Colors.grey,
-        selectedFontSize: 12,
-        unselectedFontSize: 11,
+        unselectedItemColor: Colors.grey.shade600,
+        selectedFontSize: 11,
+        unselectedFontSize: 10,
         selectedLabelStyle: const TextStyle(
           fontFamily: 'SolaimanLipi',
           fontWeight: FontWeight.bold,
@@ -109,13 +106,18 @@ class _MainScreenState extends State<MainScreen> {
             label: 'মুহাসাবা',
           ),
           BottomNavigationBarItem(
+            icon: Icon(Icons.edit_note_outlined),
+            activeIcon: Icon(Icons.edit_note),
+            label: 'নোটবই',
+          ),
+          BottomNavigationBarItem(
             icon: Icon(Icons.history),
             label: 'সর্বশেষ পঠিত',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.edit_note_outlined),
-            activeIcon: Icon(Icons.edit_note),
-            label: 'নোটবই',
+            icon: Icon(Icons.person_outline),
+            activeIcon: Icon(Icons.person),
+            label: 'অ্যাকাউন্ট',
           ),
         ],
       ),

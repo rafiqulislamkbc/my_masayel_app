@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // 🟢 ফায়ারস্টোর অফলাইন কনফিগারেশনের জন্য
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:workmanager/workmanager.dart';
@@ -304,13 +305,19 @@ Future<void> main() async {
   // 🟢 মোবাইল প্ল্যাটফর্ম
   bool isMobile = !kIsWeb && (Platform.isAndroid || Platform.isIOS);
 
-  // ফায়ারবেস ইনিট (অফলাইনে থাকলেও যেন দ্রুত টাইমআউট হয়ে অ্যাপ চলতে পারে)
+  // ফায়ারবেস ইনিট ও অফলাইন পারসিস্টেন্স কনফিগারেশন
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
-    ).timeout(const Duration(seconds: 3));
+    );
+
+    // 🌟 ফায়ারস্টোরের অফলাইন পারসিস্টেন্স ও ক্যাশ ১০০% সক্রিয় করা (অফলাইনেও সব কাজ করবে)
+    FirebaseFirestore.instance.settings = const Settings(
+      persistenceEnabled: true,
+      cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+    );
   } catch (e) {
-    debugPrint("Firebase init offline or bypassed: $e");
+    debugPrint("Firebase init or settings bypassed: $e");
   }
 
   if (isMobile) {
