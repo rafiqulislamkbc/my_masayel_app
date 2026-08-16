@@ -40,7 +40,7 @@ class NotebookPage extends StatefulWidget {
       debugPrint('Local save error: $e');
     }
 
-    // ২. 🌟 ফায়ারবেসে ইউজারের আন্ডারে notes সাব-কালেকশনে জমা হবে (যা কনসোলে দেখা যাবে)
+    // ২. ফায়ারবেসে ইউজারের আন্ডারে notes সাব-কালেকশনে জমা হবে
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
@@ -244,25 +244,45 @@ class _NotebookPageState extends State<NotebookPage> {
     }
   }
 
-  Color _getCardColor(String? colorKey) {
-    switch (colorKey) {
-      case 'amber':
-        return const Color(0xFFFEF3C7);
-      case 'emerald':
-        return const Color(0xFFD1FAE5);
-      case 'teal':
-        return const Color(0xFFE0F2F1);
-      case 'purple':
-        return const Color(0xFFF3E8FF);
-      case 'rose':
-        return const Color(0xFFFFE4E6);
-      default:
-        return Colors.white;
+  // থিম অনুয়ায়ী কার্ডের ব্যাকগ্রাউন্ড কালার নির্ধারণ
+  Color _getCardColor(String? colorKey, bool isDark) {
+    if (isDark) {
+      switch (colorKey) {
+        case 'amber':
+          return const Color(0xFF2E2412);
+        case 'emerald':
+          return const Color(0xFF132F23);
+        case 'teal':
+          return const Color(0xFF113230);
+        case 'purple':
+          return const Color(0xFF26163B);
+        case 'rose':
+          return const Color(0xFF33161C);
+        default:
+          return const Color(0xFF1E293B);
+      }
+    } else {
+      switch (colorKey) {
+        case 'amber':
+          return const Color(0xFFFEF3C7);
+        case 'emerald':
+          return const Color(0xFFD1FAE5);
+        case 'teal':
+          return const Color(0xFFE0F2F1);
+        case 'purple':
+          return const Color(0xFFF3E8FF);
+        case 'rose':
+          return const Color(0xFFFFE4E6);
+        default:
+          return Colors.white;
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     var filteredNotes = _notes;
     if (_searchQuery.isNotEmpty) {
       final q = _searchQuery.toLowerCase();
@@ -274,7 +294,7 @@ class _NotebookPageState extends State<NotebookPage> {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: const Text(
           'নোটবই ও সংরক্ষিত তথ্য',
@@ -284,9 +304,10 @@ class _NotebookPageState extends State<NotebookPage> {
             fontSize: 20,
           ),
         ),
-        backgroundColor: Colors.teal,
+        backgroundColor: isDark ? const Color(0xFF004D40) : Colors.teal,
         foregroundColor: Colors.white,
         elevation: 0,
+        centerTitle: true,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -301,24 +322,36 @@ class _NotebookPageState extends State<NotebookPage> {
             padding: const EdgeInsets.all(12),
             child: TextField(
               onChanged: (v) => setState(() => _searchQuery = v),
-              style: const TextStyle(fontFamily: 'SolaimanLipi'),
+              style: TextStyle(
+                fontFamily: 'SolaimanLipi',
+                color: isDark ? Colors.white : Colors.black87,
+              ),
               decoration: InputDecoration(
                 hintText: 'সংরক্ষিত নোট বা মাসআলা খুঁজুন...',
-                hintStyle: const TextStyle(
+                hintStyle: TextStyle(
                   fontFamily: 'SolaimanLipi',
                   fontSize: 14,
+                  color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
                 ),
-                prefixIcon: const Icon(Icons.search, size: 20, color: Colors.teal),
+                prefixIcon: Icon(
+                  Icons.search,
+                  size: 20,
+                  color: isDark ? Colors.tealAccent : Colors.teal,
+                ),
                 filled: true,
-                fillColor: Colors.white,
+                fillColor: isDark ? const Color(0xFF1E293B) : Colors.white,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
+                  borderSide: BorderSide(
+                    color: isDark ? Colors.white12 : Colors.grey.shade300,
+                  ),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
+                  borderSide: BorderSide(
+                    color: isDark ? Colors.white12 : Colors.grey.shade300,
+                  ),
                 ),
               ),
             ),
@@ -332,26 +365,30 @@ class _NotebookPageState extends State<NotebookPage> {
                           padding: const EdgeInsets.all(24),
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
-                            children: const [
-                              Icon(Icons.bookmark_border, size: 64, color: Colors.grey),
-                              SizedBox(height: 12),
+                            children: [
+                              Icon(
+                                Icons.bookmark_border,
+                                size: 64,
+                                color: isDark ? Colors.grey.shade600 : Colors.grey,
+                              ),
+                              const SizedBox(height: 12),
                               Text(
                                 'কোনো সংরক্ষিত নোট নেই',
                                 style: TextStyle(
                                   fontFamily: 'SolaimanLipi',
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.grey,
+                                  color: isDark ? Colors.grey.shade400 : Colors.grey,
                                 ),
                               ),
-                              SizedBox(height: 6),
+                              const SizedBox(height: 6),
                               Text(
                                 'যেকোনো মাসআলার বুকমার্ক আইকনে ক্লিক করে অথবা নিচের (+) বাটন দিয়ে আপনার ব্যক্তিগত নোট লিখে রাখুন।',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   fontFamily: 'SolaimanLipi',
                                   fontSize: 14,
-                                  color: Colors.grey,
+                                  color: isDark ? Colors.grey.shade500 : Colors.grey,
                                 ),
                               ),
                             ],
@@ -369,21 +406,21 @@ class _NotebookPageState extends State<NotebookPage> {
                         itemCount: filteredNotes.length,
                         itemBuilder: (context, index) {
                           final note = filteredNotes[index];
-                          return _buildNoteCard(note);
+                          return _buildNoteCard(note, isDark);
                         },
                       ),
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.teal,
+        backgroundColor: isDark ? Colors.tealAccent.shade700 : Colors.teal,
         child: const Icon(Icons.add, color: Colors.white),
         onPressed: () => _openNoteEditor(context),
       ),
     );
   }
 
-  Widget _buildNoteCard(Map<String, dynamic> note) {
+  Widget _buildNoteCard(Map<String, dynamic> note, bool isDark) {
     final id = note['id'] ?? '';
     final title = note['title'] ?? 'শিরোনামহীন নোট';
     final content = note['content'] ?? '';
@@ -395,14 +432,14 @@ class _NotebookPageState extends State<NotebookPage> {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: _getCardColor(note['color']),
+          color: _getCardColor(note['color'], isDark),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.black12),
-          boxShadow: const [
+          border: Border.all(color: isDark ? Colors.white10 : Colors.black12),
+          boxShadow: [
             BoxShadow(
-              color: Colors.black12,
-              blurRadius: 3,
-              offset: Offset(0, 1),
+              color: isDark ? Colors.black38 : Colors.black12,
+              blurRadius: 4,
+              offset: const Offset(0, 2),
             ),
           ],
         ),
@@ -416,22 +453,27 @@ class _NotebookPageState extends State<NotebookPage> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: const Color(0x1F009688),
+                      color: isDark ? const Color(0x332DD4BF) : const Color(0x1F009688),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
                       category.toString(),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: 'SolaimanLipi',
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
-                        color: Colors.teal,
+                        color: isDark ? Colors.tealAccent : Colors.teal,
                       ),
                     ),
                   ),
                 PopupMenuButton<String>(
                   padding: EdgeInsets.zero,
-                  icon: const Icon(Icons.more_vert, size: 18, color: Colors.grey),
+                  icon: Icon(
+                    Icons.more_vert,
+                    size: 18,
+                    color: isDark ? Colors.grey.shade400 : Colors.grey,
+                  ),
+                  color: isDark ? const Color(0xFF1E293B) : Colors.white,
                   onSelected: (val) {
                     if (val == 'edit') {
                       _openNoteEditor(context, note: note);
@@ -451,23 +493,43 @@ class _NotebookPageState extends State<NotebookPage> {
                     }
                   },
                   itemBuilder: (ctx) => [
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: 'edit',
                       child: Row(
                         children: [
-                          Icon(Icons.edit, size: 18, color: Colors.teal),
-                          SizedBox(width: 8),
-                          Text('সম্পাদনা', style: TextStyle(fontFamily: 'SolaimanLipi')),
+                          Icon(
+                            Icons.edit,
+                            size: 18,
+                            color: isDark ? Colors.tealAccent : Colors.teal,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'সম্পাদনা',
+                            style: TextStyle(
+                              fontFamily: 'SolaimanLipi',
+                              color: isDark ? Colors.white : Colors.black87,
+                            ),
+                          ),
                         ],
                       ),
                     ),
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: 'copy',
                       child: Row(
                         children: [
-                          Icon(Icons.copy, size: 18, color: Colors.grey),
-                          SizedBox(width: 8),
-                          Text('কপি করুন', style: TextStyle(fontFamily: 'SolaimanLipi')),
+                          Icon(
+                            Icons.copy,
+                            size: 18,
+                            color: isDark ? Colors.grey.shade300 : Colors.grey,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'কপি করুন',
+                            style: TextStyle(
+                              fontFamily: 'SolaimanLipi',
+                              color: isDark ? Colors.white : Colors.black87,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -477,7 +539,13 @@ class _NotebookPageState extends State<NotebookPage> {
                         children: [
                           Icon(Icons.delete_outline, size: 18, color: Colors.red),
                           SizedBox(width: 8),
-                          Text('মুছে ফেলুন', style: TextStyle(fontFamily: 'SolaimanLipi', color: Colors.red)),
+                          Text(
+                            'মুছে ফেলুন',
+                            style: TextStyle(
+                              fontFamily: 'SolaimanLipi',
+                              color: Colors.red,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -488,11 +556,11 @@ class _NotebookPageState extends State<NotebookPage> {
             const SizedBox(height: 4),
             Text(
               title.toString(),
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'SolaimanLipi',
                 fontWeight: FontWeight.bold,
                 fontSize: 15,
-                color: Color(0xFF1E293B),
+                color: isDark ? Colors.white : const Color(0xFF1E293B),
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
@@ -505,7 +573,7 @@ class _NotebookPageState extends State<NotebookPage> {
                   style: TextStyle(
                     fontFamily: 'SolaimanLipi',
                     fontSize: 13,
-                    color: Colors.grey.shade700,
+                    color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
                     height: 1.3,
                   ),
                   maxLines: 4,
@@ -520,10 +588,14 @@ class _NotebookPageState extends State<NotebookPage> {
   }
 
   void _openNoteDetailModal(Map<String, dynamic> note) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgModal = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final textColor = isDark ? Colors.white : const Color(0xFF334155);
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: bgModal,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -543,16 +615,19 @@ class _NotebookPageState extends State<NotebookPage> {
                   Expanded(
                     child: Text(
                       note['title'] ?? '',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: 'SolaimanLipi',
                         fontWeight: FontWeight.bold,
                         fontSize: 20,
-                        color: Colors.teal,
+                        color: isDark ? Colors.tealAccent : Colors.teal,
                       ),
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close),
+                    icon: Icon(
+                      Icons.close,
+                      color: isDark ? Colors.grey.shade300 : Colors.black54,
+                    ),
                     onPressed: () => Navigator.pop(ctx),
                   ),
                 ],
@@ -564,29 +639,32 @@ class _NotebookPageState extends State<NotebookPage> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: const Color(0x1F009688),
+                      color: isDark ? const Color(0x332DD4BF) : const Color(0x1F009688),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
                       note['category'],
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: 'SolaimanLipi',
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
-                        color: Colors.teal,
+                        color: isDark ? Colors.tealAccent : Colors.teal,
                       ),
                     ),
                   ),
                 ),
               ],
-              const Divider(height: 24),
+              Divider(
+                height: 24,
+                color: isDark ? Colors.white12 : Colors.grey.shade300,
+              ),
               SelectableText(
                 note['content'] ?? '',
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'SolaimanLipi',
                   fontSize: 16,
                   height: 1.5,
-                  color: Color(0xFF334155),
+                  color: textColor,
                 ),
               ),
               const SizedBox(height: 30),
@@ -595,9 +673,14 @@ class _NotebookPageState extends State<NotebookPage> {
                   Expanded(
                     child: OutlinedButton.icon(
                       icon: const Icon(Icons.copy, size: 18),
-                      label: const Text('কপি', style: TextStyle(fontFamily: 'SolaimanLipi')),
+                      label: const Text(
+                        'কপি',
+                        style: TextStyle(fontFamily: 'SolaimanLipi'),
+                      ),
                       onPressed: () {
-                        Clipboard.setData(ClipboardData(text: '${note['title']}\n\n${note['content']}'));
+                        Clipboard.setData(
+                          ClipboardData(text: '${note['title']}\n\n${note['content']}'),
+                        );
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('কপি করা হয়েছে!')),
                         );
@@ -607,9 +690,17 @@ class _NotebookPageState extends State<NotebookPage> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.teal),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isDark ? Colors.teal : Colors.teal,
+                      ),
                       icon: const Icon(Icons.edit, size: 18, color: Colors.white),
-                      label: const Text('সম্পাদনা', style: TextStyle(fontFamily: 'SolaimanLipi', color: Colors.white)),
+                      label: const Text(
+                        'সম্পাদনা',
+                        style: TextStyle(
+                          fontFamily: 'SolaimanLipi',
+                          color: Colors.white,
+                        ),
+                      ),
                       onPressed: () {
                         Navigator.pop(ctx);
                         _openNoteEditor(context, note: note);
@@ -626,14 +717,18 @@ class _NotebookPageState extends State<NotebookPage> {
   }
 
   void _openNoteEditor(BuildContext context, {Map<String, dynamic>? note}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final isEditing = note != null;
     final titleCtrl = TextEditingController(text: isEditing ? note['title'] : '');
     final contentCtrl = TextEditingController(text: isEditing ? note['content'] : '');
+    final bgModal = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final textColor = isDark ? Colors.white : Colors.black87;
+    final inputFill = isDark ? const Color(0xFF0F172A) : Colors.grey.shade50;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: bgModal,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -650,29 +745,70 @@ class _NotebookPageState extends State<NotebookPage> {
           children: [
             Text(
               isEditing ? 'নোট সম্পাদনা করুন' : 'নতুন নোট লিখুন',
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'SolaimanLipi',
                 fontWeight: FontWeight.bold,
                 fontSize: 19,
-                color: Colors.teal,
+                color: isDark ? Colors.tealAccent : Colors.teal,
               ),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: titleCtrl,
-              style: const TextStyle(fontFamily: 'SolaimanLipi'),
-              decoration: const InputDecoration(
+              style: TextStyle(
+                fontFamily: 'SolaimanLipi',
+                color: textColor,
+              ),
+              decoration: InputDecoration(
                 hintText: 'শিরোনাম...',
-                hintStyle: TextStyle(fontFamily: 'SolaimanLipi'),
+                hintStyle: TextStyle(
+                  fontFamily: 'SolaimanLipi',
+                  color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                ),
+                filled: true,
+                fillColor: inputFill,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: isDark ? Colors.white12 : Colors.grey.shade300,
+                  ),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: isDark ? Colors.white12 : Colors.grey.shade300,
+                  ),
+                ),
               ),
             ),
+            const SizedBox(height: 10),
             TextField(
               controller: contentCtrl,
               maxLines: 5,
-              style: const TextStyle(fontFamily: 'SolaimanLipi'),
-              decoration: const InputDecoration(
+              style: TextStyle(
+                fontFamily: 'SolaimanLipi',
+                color: textColor,
+              ),
+              decoration: InputDecoration(
                 hintText: 'বিস্তারিত নোট লিখুন...',
-                hintStyle: TextStyle(fontFamily: 'SolaimanLipi'),
+                hintStyle: TextStyle(
+                  fontFamily: 'SolaimanLipi',
+                  color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                ),
+                filled: true,
+                fillColor: inputFill,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: isDark ? Colors.white12 : Colors.grey.shade300,
+                  ),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: isDark ? Colors.white12 : Colors.grey.shade300,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 16),
