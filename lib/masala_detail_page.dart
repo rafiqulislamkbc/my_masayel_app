@@ -167,8 +167,8 @@ class _MasalaDetailPageState extends State<MasalaDetailPage> {
           IconButton(
   icon: const Icon(Icons.bookmark_add_outlined),
   tooltip: 'নোটবইতে সংরক্ষণ করুন',
-  onPressed: () {
-    // প্রশ্ন, উত্তর ও রেফারেন্স একসাথে গুছিয়ে নোটে সেভ হবে
+  onPressed: () async {
+    // প্রশ্ন, উত্তর ও রেফারেন্স একসাথে গুছিয়ে প্রস্তুত করা
     final noteBody = '''
 প্রশ্ন: ${masala['question'] ?? ''}
 
@@ -177,12 +177,44 @@ class _MasalaDetailPageState extends State<MasalaDetailPage> {
 রেফারেন্স: ${masala['reference'] ?? 'উল্লেখ নেই'}
 '''.trim();
 
-    NotebookPage.saveQuickNote(
+    // ১. নোটবইতে সেভ করা
+    await NotebookPage.saveQuickNote(
       context: context,
       title: 'মাসআলা: ${masala['title'] ?? 'শিরোনামহীন'}',
       content: noteBody,
       category: 'মাসআলা নোট',
     );
+
+    // ২. 🌟 তাৎক্ষণিক স্পষ্ট কনফার্মেশন মেসেজ প্রদর্শন
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar(); // আগের মেসেজ থাকলে তা সরিয়ে নতুনটি দেখানো
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: const [
+              Icon(Icons.check_circle, color: Colors.white, size: 20),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'মাসআলাটি সফলভাবে নোটবইতে সংরক্ষিত হয়েছে!',
+                  style: TextStyle(
+                    fontFamily: 'SolaimanLipi',
+                    fontSize: 15,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.teal.shade800,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   },
 ),
           IconButton(
