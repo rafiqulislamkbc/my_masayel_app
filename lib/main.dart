@@ -471,6 +471,11 @@ class MasayelApp extends StatelessWidget {
               centerTitle: true,
               elevation: 2,
             ),
+            bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+              backgroundColor: Colors.white,
+              selectedItemColor: Colors.teal,
+              unselectedItemColor: Colors.grey,
+            ),
           ),
 
           darkTheme: ThemeData(
@@ -486,8 +491,13 @@ class MasayelApp extends StatelessWidget {
               centerTitle: true,
               elevation: 2,
             ),
+            // 🌟 ডার্ক মোডে বটমবারকে স্থায়ীভাবে ডার্ক করার জন্য:
+            bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+              backgroundColor: Color(0xFF1E1E1E),
+              selectedItemColor: Colors.tealAccent,
+              unselectedItemColor: Colors.grey,
+            ),
           ),
-          
           home: const SplashScreen(),
         );
       },

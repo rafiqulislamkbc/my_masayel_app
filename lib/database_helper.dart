@@ -18,7 +18,6 @@ class DatabaseHelper {
   static Future<Database> _initDatabase() async {
     String dbPath = '';
 
-    // 🟢 ১. প্ল্যাটফর্ম অনুযায়ী সঠিক ডাটাবেজ পাথ নির্ধারণ
     if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
       sqfliteFfiInit();
       databaseFactory = databaseFactoryFfi;
@@ -30,13 +29,11 @@ class DatabaseHelper {
       dbPath = join(databasesPath, "masayel.db");
     }
 
-    // 🟢 ২. ডিরেক্টরি নিশ্চিত করা
     final file = File(dbPath);
     if (!await file.parent.exists()) {
       await file.parent.create(recursive: true);
     }
 
-    // 🟢 ৩. ডাটাবেজ ফাইল যদি না থাকে তবে Assets থেকে কপি করা
     bool isFileMissing = !await file.exists() || (await file.length()) < 1000;
 
     if (isFileMissing) {
@@ -50,11 +47,10 @@ class DatabaseHelper {
       }
     }
 
-    // 🟢 ৪. প্ল্যাটফর্ম অনুযায়ী নিরাপদভাবে ডাটাবেজ ওপেন করা (মোবাইল vs ডেক্সটপ)
     if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
       return await databaseFactoryFfi.openDatabase(dbPath);
     } else {
-      return await openDatabase(dbPath); // 👈 মোবাইলের জন্য নেটিভ openDatabase
+      return await openDatabase(dbPath);
     }
   }
 

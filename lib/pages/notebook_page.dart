@@ -8,7 +8,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 class NotebookPage extends StatefulWidget {
   const NotebookPage({super.key});
 
-  // যেকোনো স্ক্রিন বা মাসআলা পেজ থেকে তথ্য সরাসরি নোটবইতে সেভ করার ফাংশন
   static Future<void> saveQuickNote({
     required BuildContext context,
     required String title,
@@ -30,7 +29,6 @@ class NotebookPage extends StatefulWidget {
       'updatedAt': timestamp,
     };
 
-    // ১. লোকাল স্টোরেজে স্থায়ী সংরক্ষণ (অফলাইনেও আজীবন থাকবে)
     try {
       final prefs = await SharedPreferences.getInstance();
       List<String> rawList = prefs.getStringList('local_user_notes') ?? [];
@@ -40,7 +38,6 @@ class NotebookPage extends StatefulWidget {
       debugPrint('Local save error: $e');
     }
 
-    // ২. ফায়ারবেসে ইউজারের আন্ডারে notes সাব-কালেকশনে জমা হবে
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
@@ -116,7 +113,6 @@ class _NotebookPageState extends State<NotebookPage> {
       } catch (_) {}
     }
 
-    // ক্লাউড থেকে সিঙ্ক
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       try {
@@ -167,7 +163,7 @@ class _NotebookPageState extends State<NotebookPage> {
         'id': noteId,
         'title': title.isEmpty ? 'শিরোনামহীন নোট' : title,
         'content': content,
-        'category': category ?? 'কাস্টম নোট',
+        'category': category ?? 'ব্যক্তিগত নোট',
         'color': color ?? 'teal',
         'createdAt': now,
         'updatedAt': now,
@@ -186,7 +182,6 @@ class _NotebookPageState extends State<NotebookPage> {
     await prefs.setStringList('local_user_notes', rawList);
     setState(() {});
 
-    // ফায়ারবেসে আপডেট
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       try {
@@ -199,7 +194,7 @@ class _NotebookPageState extends State<NotebookPage> {
           'userId': user.uid,
           'title': title.isEmpty ? 'শিরোনামহীন নোট' : title,
           'content': content,
-          'category': category ?? 'কাস্টম নোট',
+          'category': category ?? 'ব্যক্তিগত নোট',
           'color': color ?? 'teal',
           'isDeleted': false,
           'updatedAt': FieldValue.serverTimestamp(),
@@ -218,7 +213,6 @@ class _NotebookPageState extends State<NotebookPage> {
     final rawList = _notes.map((n) => jsonEncode(n)).toList();
     await prefs.setStringList('local_user_notes', rawList);
 
-    // ফায়ারবেসে সফট ডিলিট
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       try {
@@ -235,7 +229,7 @@ class _NotebookPageState extends State<NotebookPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'নোটটি মুছে ফেলা হয়েছে',
+            'নোটটি ডিলিট হয়েছে',
             style: TextStyle(fontFamily: 'SolaimanLipi'),
           ),
           duration: Duration(seconds: 2),
@@ -244,7 +238,6 @@ class _NotebookPageState extends State<NotebookPage> {
     }
   }
 
-  // থিম অনুয়ায়ী কার্ডের ব্যাকগ্রাউন্ড কালার নির্ধারণ
   Color _getCardColor(String? colorKey, bool isDark) {
     if (isDark) {
       switch (colorKey) {
@@ -297,7 +290,7 @@ class _NotebookPageState extends State<NotebookPage> {
       backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: const Text(
-          'নোটবই ও সংরক্ষিত তথ্য',
+          'নোটবই ও তথ্যবই',
           style: TextStyle(
             fontFamily: 'SolaimanLipi',
             fontWeight: FontWeight.bold,
@@ -327,7 +320,7 @@ class _NotebookPageState extends State<NotebookPage> {
                 color: isDark ? Colors.white : Colors.black87,
               ),
               decoration: InputDecoration(
-                hintText: 'সংরক্ষিত নোট বা মাসআলা খুঁজুন...',
+                hintText: 'সংরক্ষিত নোট খুঁজুন...',
                 hintStyle: TextStyle(
                   fontFamily: 'SolaimanLipi',
                   fontSize: 14,
@@ -383,7 +376,7 @@ class _NotebookPageState extends State<NotebookPage> {
                               ),
                               const SizedBox(height: 6),
                               Text(
-                                'যেকোনো মাসআলার বুকমার্ক আইকনে ক্লিক করে অথবা নিচের (+) বাটন দিয়ে আপনার ব্যক্তিগত নোট লিখে রাখুন।',
+                                'যেকোনো মাসআলার বুকমার্ক আইকনে ক্লিক করে অথবা নিচের (+) বাটন দিয়ে আপনার নোটে যুক্ত করুন।',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   fontFamily: 'SolaimanLipi',

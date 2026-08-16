@@ -37,9 +37,9 @@ jobs:
           CL: "/D_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS"
         run: flutter build windows --release
 
-      # 🟢 ২. অ্যান্ড্রয়েড এপিকে (.apk) বিল্ড করা
+      # 🟢 ২. অ্যান্ড্রয়েড এপিকে (.apk) বিল্ড করা (স্লিম সাইজ ১৫-১৮ MB)
       - name: Build Android APK
-        run: flutter build apk --release --android-skip-build-dependency-validation
+        run: flutter build apk --split-per-abi --release --android-skip-build-dependency-validation
 
       # 🚀 উইন্ডোজ অ্যাপ জিপ বানিয়ে আপলোড
       - name: Upload Windows Executable
@@ -48,9 +48,9 @@ jobs:
           name: Masayel-Windows-App
           path: build/windows/x64/runner/Release/
 
-      # 🚀 অ্যান্ড্রয়েড APK ফাইল আপলোড
+      # 🚀 স্লিম অ্যান্ড্রয়েড APK ফাইলসমূহ আপলোড
       - name: Upload Android APK
         uses: actions/upload-artifact@v4
         with:
           name: Masayel-Android-APK
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: build/app/outputs/flutter-apk/*.apk

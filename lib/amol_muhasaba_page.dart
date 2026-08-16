@@ -5,7 +5,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-// সংখ্যা বাংলায় রূপান্তর
 String toBanglaNumber(dynamic input) {
   const Map<String, String> bnDigits = {
     '0': '০', '1': '১', '2': '২', '3': '৩', '4': '৪',
@@ -14,7 +13,6 @@ String toBanglaNumber(dynamic input) {
   return input.toString().split('').map((c) => bnDigits[c] ?? c).join();
 }
 
-// সম্পূর্ণ বাংলা তারিখ
 String getBanglaFullDate(DateTime date) {
   const List<String> bnMonths = [
     'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন',
@@ -653,10 +651,8 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
 
   @override
   Widget build(BuildContext context) {
-    // 🟢 অ্যাপের বর্তমান মোড নির্ণয় (Dark or Light)
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // থিম অনুযায়ী ডায়নামিক কালার প্যালেট
     final scaffoldBg = isDark ? const Color(0xFF101614) : const Color(0xFFF3F5F4);
     final cardBg = isDark ? const Color(0xFF1A2420) : Colors.white;
     final cardBorder = isDark ? const Color(0xFF283832) : const Color(0xFFE5E7EB);
@@ -692,48 +688,6 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
             ),
           ],
         ),
-        actions: [
-          IconButton(
-            tooltip: 'লগআউট',
-            icon: const Icon(Icons.logout_rounded),
-            onPressed: () async {
-              final confirm = await showDialog<bool>(
-                context: context,
-                builder: (context) => AlertDialog(
-                  backgroundColor: cardBg,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  title: Text(
-                    'লগআউট নিশ্চিতকরণ',
-                    style: TextStyle(fontWeight: FontWeight.bold, color: textPrimary),
-                  ),
-                  content: Text(
-                    'আপনি কি আপনার অ্যাকাউন্ট থেকে লগআউট করতে চান?',
-                    style: TextStyle(color: textSecondary),
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, false),
-                      child: const Text('না', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
-                    ),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF007A5E),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      onPressed: () => Navigator.pop(context, true),
-                      child: const Text('লগআউট'),
-                    ),
-                  ],
-                ),
-              );
-
-              if (confirm == true) {
-                await FirebaseAuth.instance.signOut();
-              }
-            },
-          ),
-        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -765,7 +719,6 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
                 ),
               ),
 
-            // 🟢 ১. টাইমার ও জেলা কার্ড (থিম এডাপ্টিভ)
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -851,7 +804,6 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
             ),
             const SizedBox(height: 14),
 
-            // 🟢 ২. স্ট্রিক কার্ড
             InkWell(
               onTap: () {},
               borderRadius: BorderRadius.circular(24),
@@ -949,7 +901,6 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
             ),
             const SizedBox(height: 12),
 
-            // 🟢 ৩. আমল কার্ড তালিকা (ডার্ক ও লাইট ফ্রেন্ডলি)
             ListView.separated(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -1056,7 +1007,6 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
                           ),
                           const SizedBox(width: 12),
 
-                          // ডানপাশের কাস্টম গোল চেকমার্ক
                           AnimatedContainer(
                             duration: const Duration(milliseconds: 180),
                             width: 28,
@@ -1098,7 +1048,6 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
             ),
             const SizedBox(height: 22),
 
-            // 🟢 ৪. সাবমিট বাটন
             SizedBox(
               height: 52,
               child: ElevatedButton.icon(

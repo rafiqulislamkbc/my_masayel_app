@@ -62,18 +62,18 @@ class _SplashScreenState extends State<SplashScreen> {
                 child: Column(
                   children: [
                     Text(
-                      'ডেভেলপার: রফিকুল ইসলাম',
+                      'NASEEHAH IT PRESENTS',
                       style: TextStyle(
-                        color: Color.fromARGB(255, 19, 145, 19),
-                        fontSize: 13,
+                        color: Color.fromARGB(255, 34, 170, 34),
+                        fontSize: 16,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 0.5,
                       ),
                       textAlign: TextAlign.center,
                     ),
-                    SizedBox(height: 4),
+                    SizedBox(height: 0),
                     Text(
-                      'হ্যালো: ০১৮৩৩-০৭০৩২০',
+                      'রফিকুল ইসলাম - ০১৮৩৩০৭০৩২০',
                       style: TextStyle(
                         color: Colors.grey,
                         fontSize: 12,
