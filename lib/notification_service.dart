@@ -228,7 +228,7 @@ class NotificationService {
     int? masalaId = int.tryParse(rawId);
     if (masalaId == null) return;
 
-    await Future.delayed(const Duration(milliseconds: 2500));
+    await Future.delayed(const Duration(milliseconds: 3000));
     for (int i = 0; i < 10; i++) {
       final context = navigatorKey.currentContext;
       if (context != null) {
@@ -251,7 +251,7 @@ class NotificationService {
   }
 
   static Future<void> _navigateToAmolMuhasabaPage(GlobalKey<NavigatorState> navigatorKey) async {
-    await Future.delayed(const Duration(milliseconds: 2500));
+    await Future.delayed(const Duration(milliseconds: 3000));
     for (int i = 0; i < 10; i++) {
       final context = navigatorKey.currentContext;
       if (context != null && context.mounted) {
@@ -273,7 +273,7 @@ class NotificationService {
     String body, {
     String? url,
   }) async {
-    await Future.delayed(const Duration(milliseconds: 2500));
+    await Future.delayed(const Duration(milliseconds: 3000));
     for (int i = 0; i < 10; i++) {
       final context = navigatorKey.currentContext;
       if (context != null && context.mounted) {
@@ -354,7 +354,7 @@ class NotificationService {
                     }
                   },
                   icon: const Icon(Icons.open_in_new, size: 16),
-                  label: const Text('বিস্তারিত দেখুন'),
+                  label: const Text('লিংকে যান'),
                 ),
               TextButton(
                 onPressed: () => Navigator.pop(dialogContext),

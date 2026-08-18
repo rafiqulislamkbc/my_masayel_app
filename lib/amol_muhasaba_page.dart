@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'muhasaba_firebase_service.dart';
+import 'icon_helper.dart';
 
 String toBanglaNumber(dynamic input) {
   const Map<String, String> bnDigits = {
@@ -730,9 +731,7 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
     final filteredAmols = selectedFilter == 'all'
         ? amols
         : amols.where((a) => a.category == selectedFilter).toList();
-
-    final user = FirebaseAuth.instance.currentUser;
-
+        
     return Scaffold(
       backgroundColor: scaffoldBg,
       appBar: AppBar(
@@ -797,7 +796,11 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.auto_awesome, color: Color(0xFF007A5E), size: 20),
+                        Icon(
+                          IconHelper.getDynamicIcon(bannerData?['icon']?.toString()),
+                            color: const Color(0xFF007A5E),
+                              size: 20,
+                          ),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Column(
@@ -827,32 +830,6 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
                   );
                 },
               ),
-
-              if (user != null)
-                Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: cardBg,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: cardBorder),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.account_circle, color: Color(0xFF007A5E), size: 20),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'ব্যবহারকারী: ${user.displayName ?? user.email ?? "নাম প্রকাশে অনিচ্ছুক"}',
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: textPrimary),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const Icon(Icons.cloud_done, color: Color(0xFF007A5E), size: 18),
-                    ],
-                  ),
-                ),
-
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
