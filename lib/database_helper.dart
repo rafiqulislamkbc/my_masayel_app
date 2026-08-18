@@ -5,6 +5,7 @@ import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:archive/archive.dart'; // 🌟 জিপ ডেটাবেজ আনপ্যাক করার প্যাকেজ
 
 class DatabaseHelper {
   static Database? _database;
@@ -36,14 +37,28 @@ class DatabaseHelper {
 
     bool isFileMissing = !await file.exists() || (await file.length()) < 1000;
 
+    // 🌟 যদি ডেটাবেজ ফাইলে ডাটা না থাকে (প্রথমবার অ্যাপ ওপেন করার সময়)
     if (isFileMissing) {
       try {
-        ByteData data = await rootBundle.load("assets/database/masayel.db");
+        debugPrint("--> Loading masayel.zip from assets...");
+        ByteData data = await rootBundle.load("assets/database/masayel.zip");
         List<int> bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
-        await file.writeAsBytes(bytes, flush: true);
-        debugPrint("--> Assets database copied! Size: ${bytes.length} bytes");
+
+        // জিপ ডিকোড করে মূল ৪০ এমবি ডেটাবেজ এক্সট্র্যাক্ট করা
+        final archive = ZipDecoder().decodeBytes(bytes);
+
+        for (final archiveFile in archive) {
+          if (archiveFile.isFile) {
+            final outputStream = file.openWrite();
+            outputStream.add(archiveFile.content as List<int>);
+            await outputStream.flush();
+            await outputStream.close();
+            debugPrint("--> masayel.zip extracted successfully! Size: ${await file.length()} bytes");
+            break;
+          }
+        }
       } catch (e) {
-        debugPrint("--> Error copying database: $e");
+        debugPrint("--> Error extracting zipped database: $e");
       }
     }
 

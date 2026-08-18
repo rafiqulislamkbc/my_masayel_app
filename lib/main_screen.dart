@@ -3,9 +3,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'database_helper.dart';
 import 'home_page.dart';
 import 'masala_detail_page.dart';
-import 'amol_muhasaba_page.dart'; // সরাসরি মুহাসাবা পেজ
-import 'muhasaba_auth_gate.dart';  // অ্যাকাউন্ট / লগইন গেট
-import 'pages/notebook_page.dart'; // নোটবই পেজ
+import 'amol_muhasaba_page.dart';
+import 'muhasaba_auth_gate.dart';
+import 'pages/notebook_page.dart';
 
 class MainScreen extends StatefulWidget {
   final int initialIndex;
@@ -18,21 +18,24 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   late int _currentIndex;
 
-  // ৫টি পেইজের তালিকা
-  final List<Widget> _pages = [
-    const HomePage(),          // 0: হোম
-    const AmolMuhasabaPage(),  // 1: সরাসরি মুহাসাবা পেজ (লগইন ব্যারিয়ার ছাড়া)
-    const NotebookPage(),      // 2: নোটবই ও সংরক্ষিত তথ্য
-    const SizedBox(),          // 3: সর্বশেষ পঠিত (অন-ক্লিক পুশ হবে)
-    const MuhasabaAuthGate(),  // 4: অ্যাকাউন্ট / লগইন ও প্রোফাইল ব্যবস্থাপনা
+  // 🌟 মেমোরিতে জীবন্ত থাকা ৪টি মূল পেজ
+  final List<Widget> _pages = const [
+    HomePage(),          // 0: হোম
+    AmolMuhasabaPage(),  // 1: মুহাসাবা
+    NotebookPage(),      // 2: নোটবই
+    MuhasabaAuthGate(),  // 3 (ট্যাবে ৪): অ্যাকাউন্ট
   ];
 
   @override
   void initState() {
     super.initState();
-    _currentIndex = widget.initialIndex;
+    // ৩ নম্বর ছিল অ্যাকশন বাটন, তাই ৩ আসলে হোমে থাকবে, ৪ আসলে অ্যাকাউন্টে থাকবে
+    _currentIndex = (widget.initialIndex == 3 || widget.initialIndex < 0 || widget.initialIndex > 4)
+        ? 0
+        : widget.initialIndex;
   }
 
+  // 🌟 সর্বশেষ পঠিত মাসআলা মসৃণভাবে খোলার ফাংশন
   Future<void> _openLastRead(BuildContext context) async {
     final prefs = await SharedPreferences.getInstance();
     final int? lastId = prefs.getInt('last_masala_id');
@@ -67,24 +70,40 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
+  // বটম নেভিগেশন বারের ইনডেক্স থেকে IndexedStack-এর ইনডেক্সে রূপান্তর
+  int _getStackIndex() {
+    if (_currentIndex == 4) return 3; // অ্যাকাউন্ট পেজ
+    if (_currentIndex >= 0 && _currentIndex <= 2) return _currentIndex;
+    return 0;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      body: _currentIndex == 3 ? _pages[0] : _pages[_currentIndex],
+      // 🌟 IndexedStack ব্যবহার করায় কোনো পেজের ডাটা নষ্ট হবে না এবং কোনো ঝাঁকি খাবে না
+      body: IndexedStack(
+        index: _getStackIndex(),
+        children: _pages,
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) async {
           if (index == 3) {
-            // সর্বশেষ পঠিত মাসআলা ওপেন হবে
+            // ৩ নম্বর ইনডেক্সটি একটি সরাসরি অ্যাকশন (সর্বশেষ পঠিত পেজে নিয়ে যাবে)
             await _openLastRead(context);
           } else {
-            setState(() => _currentIndex = index);
+            // অন্য যেকোনো ট্যাবে মসৃণভাবে সুইচ করবে
+            setState(() {
+              _currentIndex = index;
+            });
           }
         },
         type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
-        selectedItemColor: Colors.teal,
-        unselectedItemColor: Colors.grey.shade600,
+        backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+        selectedItemColor: isDark ? Colors.tealAccent : Colors.teal,
+        unselectedItemColor: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
         selectedFontSize: 11,
         unselectedFontSize: 10,
         selectedLabelStyle: const TextStyle(

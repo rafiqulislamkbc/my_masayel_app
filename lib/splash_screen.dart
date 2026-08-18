@@ -12,8 +12,7 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    // ৪ সেকেন্ডের বদলে ২ সেকেন্ড করা হয়েছে যাতে অফলাইনে দ্রুত ওপেন হয়
-    Future.delayed(const Duration(milliseconds: 2000), () {
+    Future.delayed(const Duration(milliseconds: 3000), () {
       if (mounted) {
         Navigator.pushReplacement(
           context,
@@ -42,16 +41,6 @@ class _SplashScreenState extends State<SplashScreen> {
                 height: 85,
                 fit: BoxFit.contain,
               ),
-              const SizedBox(height: 16),
-              Text(
-                'আপনি যা জানতে চেয়েছেন',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: isDarkMode ? Colors.tealAccent : const Color(0xFF006B49),
-                ),
-                textAlign: TextAlign.center,
-              ),
               const SizedBox(height: 28),
               const CircularProgressIndicator(
                 color: Colors.teal,
@@ -64,8 +53,8 @@ class _SplashScreenState extends State<SplashScreen> {
                     Text(
                       'NASEEHAH IT PRESENTS',
                       style: TextStyle(
-                        color: Color.fromARGB(255, 34, 170, 34),
-                        fontSize: 16,
+                        color: Colors.teal,
+                        fontSize: 14,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 0.5,
                       ),

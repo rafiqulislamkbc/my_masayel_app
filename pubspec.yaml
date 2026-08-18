@@ -9,6 +9,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  archive: ^3.6.1
   sqflite: ^2.3.3+1
   sqflite_common_ffi: ^2.3.3
   sqlite3_flutter_libs: ^0.5.24
@@ -37,16 +38,21 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   ios: false
-  image_path: "assets/logo.png"
+  image_path: "assets/app_icon.png"
   min_sdk_android: 21
+  windows:
+    generate: true
+    image_path: "assets/app_icon.png"
+    icon_size: 48
 
 flutter:
   uses-material-design: true
 
   assets:
     - assets/logo.png
+    - assets/app_icon.png
     - assets/developer.jpg
-    - assets/database/masayel.db
+    - assets/database/masayel.zip
 
   fonts:
     - family: SolaimanLipi
