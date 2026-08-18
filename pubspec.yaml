@@ -51,7 +51,6 @@ flutter:
   assets:
     - assets/logo.png
     - assets/app_icon.png
-    - assets/developer.jpg
     - assets/database/masayel.zip
 
   fonts:
@@ -61,6 +60,3 @@ flutter:
     - family: TraditionalArabic
       fonts:
         - asset: assets/fonts/TraditionalArabicRegular.ttf
-    - family: JameelNoori
-      fonts:
-        - asset: assets/fonts/JameelNooriNastaleeq.ttf

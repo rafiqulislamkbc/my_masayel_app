@@ -36,7 +36,6 @@ class _MasalaDetailPageState extends State<MasalaDetailPage> {
       fontFamily: 'SolaimanLipi',
       fontFamilyFallback: const [
         'TraditionalArabic',
-        'JameelNoori',
       ],
     );
   }

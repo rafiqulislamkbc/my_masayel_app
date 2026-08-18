@@ -286,14 +286,14 @@ if (latestVersion != currentVersion && context.mounted) {
                         child: CircleAvatar(
                           radius: 34,
                           backgroundImage: ResizeImage(
-                            AssetImage('assets/developer.jpg'),
+                            AssetImage('assets/app_icon.png'),
                             width: 140,
                           ),
                         ),
                       ),
                       SizedBox(height: 12),
                       Text(
-                        'রফিকুল ইসলাম',
+                        'আপনি যা জানতে চেয়েছেন',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -302,7 +302,7 @@ if (latestVersion != currentVersion && context.mounted) {
                       ),
                       SizedBox(height: 2),
                       Text(
-                        'আলেম, লেখক এবং\nমোবাইল অ্যাপ ডেভেলপার',
+                        'মাসিক আলকাউছার-এর\nআপনি যা জানতে চেয়েছেন বিভাগ',
                         style: TextStyle(
                           color: Colors.white70,
                           fontSize: 12,

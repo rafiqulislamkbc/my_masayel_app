@@ -132,7 +132,7 @@ Future<void> _navigateToMasalaDetailPage(String rawId) async {
   int? masalaId = int.tryParse(rawId);
   if (masalaId == null) return;
 
-  await Future.delayed(const Duration(milliseconds: 4500));
+  await Future.delayed(const Duration(milliseconds: 4000));
 
   for (int i = 0; i < 10; i++) {
     final context = navigatorKey.currentContext;
@@ -151,13 +151,13 @@ Future<void> _navigateToMasalaDetailPage(String rawId) async {
         break;
       }
     }
-    await Future.delayed(const Duration(milliseconds: 500));
+    await Future.delayed(const Duration(milliseconds: 400));
   }
 }
 
 /// 🕌 ৩. নোটিফিকেশনে ক্লিক করলে সরাসরি "AmolMuhasabaPage"-এ পাঠানোর ফাংশন (No Popup)
 Future<void> _navigateToAmolMuhasabaPage() async {
-  await Future.delayed(const Duration(milliseconds: 4500));
+  await Future.delayed(const Duration(milliseconds: 4000));
 
   for (int i = 0; i < 10; i++) {
     final context = navigatorKey.currentContext;
@@ -170,13 +170,13 @@ Future<void> _navigateToAmolMuhasabaPage() async {
       );
       break;
     }
-    await Future.delayed(const Duration(milliseconds: 500));
+    await Future.delayed(const Duration(milliseconds: 400));
   }
 }
 
 /// 📣 ৪. ফায়ারবেস কাস্টম ক্যাম্পেইন / জরুরি বিষয়ের ডায়ালগ
 Future<void> _showCustomNoticeDialog(String title, String body, {String? url}) async {
-  await Future.delayed(const Duration(milliseconds: 4500));
+  await Future.delayed(const Duration(milliseconds: 4000));
 
   for (int i = 0; i < 10; i++) {
     final context = navigatorKey.currentContext;
@@ -463,7 +463,7 @@ class MasayelApp extends StatelessWidget {
             brightness: Brightness.light,
             primarySwatch: Colors.teal,
             fontFamily: 'SolaimanLipi',
-            fontFamilyFallback: const ['TraditionalArabic', 'JameelNoori'],
+            fontFamilyFallback: const ['TraditionalArabic'],
             scaffoldBackgroundColor: const Color(0xFFF5F5F5),
             appBarTheme: const AppBarTheme(
               backgroundColor: Colors.teal,
@@ -482,7 +482,7 @@ class MasayelApp extends StatelessWidget {
             brightness: Brightness.dark,
             primarySwatch: Colors.teal,
             fontFamily: 'SolaimanLipi',
-            fontFamilyFallback: const ['TraditionalArabic', 'JameelNoori'],
+            fontFamilyFallback: const ['TraditionalArabic'],
             scaffoldBackgroundColor: const Color(0xFF121212),
             cardColor: const Color(0xFF1E1E1E),
             appBarTheme: const AppBarTheme(
