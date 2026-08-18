@@ -228,7 +228,7 @@ class NotificationService {
     int? masalaId = int.tryParse(rawId);
     if (masalaId == null) return;
 
-    await Future.delayed(const Duration(milliseconds: 3000));
+    await Future.delayed(const Duration(milliseconds: 3500));
     for (int i = 0; i < 10; i++) {
       final context = navigatorKey.currentContext;
       if (context != null) {
@@ -251,7 +251,7 @@ class NotificationService {
   }
 
   static Future<void> _navigateToAmolMuhasabaPage(GlobalKey<NavigatorState> navigatorKey) async {
-    await Future.delayed(const Duration(milliseconds: 3000));
+    await Future.delayed(const Duration(milliseconds: 3500));
     for (int i = 0; i < 10; i++) {
       final context = navigatorKey.currentContext;
       if (context != null && context.mounted) {
@@ -273,7 +273,7 @@ class NotificationService {
     String body, {
     String? url,
   }) async {
-    await Future.delayed(const Duration(milliseconds: 3000));
+    await Future.delayed(const Duration(milliseconds: 3500));
     for (int i = 0; i < 10; i++) {
       final context = navigatorKey.currentContext;
       if (context != null && context.mounted) {
@@ -365,7 +365,7 @@ class NotificationService {
         );
         break;
       }
-      await Future.delayed(const Duration(milliseconds: 500));
+      await Future.delayed(const Duration(milliseconds: 400));
     }
   }
 }

@@ -22,7 +22,7 @@ class _SlideInItemState extends State<SlideInItem>
 
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 450),
+      duration: const Duration(milliseconds: 550),
     );
 
     _offsetAnimation = Tween<Offset>(
