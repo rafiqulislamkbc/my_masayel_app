@@ -183,7 +183,6 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
     }).toList();
   }
 
-  // 🌟 ফায়ারবেস থেকে রিমোটলি আমল পরিবর্তন লোড করা
   void _listenToDynamicAmols() {
     _amolsSubscription = MuhasabaFirebaseService.getDynamicAmolsStream().listen((dynamicList) async {
       if (!mounted) return;
@@ -192,16 +191,37 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
       final uid = user?.uid ?? 'guest';
       final todayKey = DateTime.now().toIso8601String().substring(0, 10);
 
+      Map<String, dynamic>? tasks;
+      if (user != null) {
+        try {
+          final todaySnap = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .collection('muhasaba_records')
+              .doc(todayKey)
+              .get();
+          if (todaySnap.exists && todaySnap.data() != null) {
+            tasks = todaySnap.data()!['tasks'] as Map<String, dynamic>?;
+          }
+        } catch (_) {}
+      }
+
       setState(() {
         amols = dynamicList.map((d) {
           final id = d['id'].toString();
-          final savedStatus = prefs.getBool('amol_${uid}_${todayKey}_$id') ?? false;
+          bool isDone = false;
+          if (tasks != null && tasks.containsKey(id)) {
+            isDone = tasks[id] == true;
+          } else {
+            isDone = prefs.getBool('amol_${uid}_${todayKey}_$id') ?? false;
+          }
+
           return AmolItem(
             id: id,
-            title: d['title'].toString(),
+            title: (d['title'] ?? id).toString(),
             subtitle: (d['subtitle'] ?? '').toString(),
             category: (d['category'] ?? 'farz').toString(),
-            isCompleted: savedStatus,
+            isCompleted: isDone,
           );
         }).toList();
       });
