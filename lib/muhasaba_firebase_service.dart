@@ -4,92 +4,24 @@ import 'package:flutter/material.dart';
 class MuhasabaFirebaseService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  /// ডিফল্ট স্ট্যান্ডার্ড আমল তালিকা (অফলাইনের জন্য ফলব্যাক)
+  /// ডিফল্ট স্ট্যান্ডার্ড আমল তালিকা (ইন্টারনেট না থাকলে বা ফায়ারবেস লোড হওয়ার আগে দেখাবে)
   static final List<Map<String, dynamic>> defaultAmols = [
-    {
-      'id': 'fajr',
-      'title': 'ফজর নামাজ (জামাতে)',
-      'category': 'ফরজ নামাজ',
-      'points': 10,
-      'order': 1,
-      'isActive': true,
-    },
-    {
-      'id': 'dhuhr',
-      'title': 'জোহর নামাজ (জামাতে)',
-      'category': 'ফরজ নামাজ',
-      'points': 10,
-      'order': 2,
-      'isActive': true,
-    },
-    {
-      'id': 'asr',
-      'title': 'আসর নামাজ (জামাতে)',
-      'category': 'ফরজ নামাজ',
-      'points': 10,
-      'order': 3,
-      'isActive': true,
-    },
-    {
-      'id': 'maghrib',
-      'title': 'মাগরিব নামাজ (জামাতে)',
-      'category': 'ফরজ নামাজ',
-      'points': 10,
-      'order': 4,
-      'isActive': true,
-    },
-    {
-      'id': 'isha',
-      'title': 'এশা নামাজ (জামাতে)',
-      'category': 'ফরজ নামাজ',
-      'points': 10,
-      'order': 5,
-      'isActive': true,
-    },
-    {
-      'id': 'quran',
-      'title': 'দৈনিক কুরআন তিলাওয়াত',
-      'category': 'নফল আমল',
-      'points': 15,
-      'order': 6,
-      'isActive': true,
-    },
-    {
-      'id': 'zikr_morning_evening',
-      'title': 'সকাল ও সন্ধ্যার মাসনূন দোয়া/জিকির',
-      'category': 'জিকির ও আজকার',
-      'points': 10,
-      'order': 7,
-      'isActive': true,
-    },
-    {
-      'id': 'istighfar',
-      'title': 'দৈনিক ইস্তিগফার (কমপক্ষে ১০০ বার)',
-      'category': 'জিকির ও আজকার',
-      'points': 10,
-      'order': 8,
-      'isActive': true,
-    },
-    {
-      'id': 'darood',
-      'title': 'রাসূলুল্লাহ ﷺ-এর ওপর দরূদ পাঠ',
-      'category': 'জিকির ও আজকার',
-      'points': 10,
-      'order': 9,
-      'isActive': true,
-    },
-    {
-      'id': 'tahajjud',
-      'title': 'তাহাজ্জুদ নামাজ',
-      'category': 'নফল নামাজ',
-      'points': 20,
-      'order': 10,
-      'isActive': true,
-    },
+    {'id': 'fajr', 'title': 'ফজর', 'subtitle': '২ রাকাত সুন্নাত ও ২ রাকাত ফরজ', 'category': 'farz', 'order': 1, 'isActive': true},
+    {'id': 'dhuhr', 'title': 'যোহর', 'subtitle': '৪ রাকাত ফরজ ও সুন্নাত সালাত', 'category': 'farz', 'order': 2, 'isActive': true},
+    {'id': 'asr', 'title': 'আসর', 'subtitle': '৪ রাকাত ফরজ সালাত', 'category': 'farz', 'order': 3, 'isActive': true},
+    {'id': 'maghrib', 'title': 'মাগরিব', 'subtitle': '৩ রাকাত ফরজ ও ২ রাকাত সুন্নাত', 'category': 'farz', 'order': 4, 'isActive': true},
+    {'id': 'isha', 'title': 'এশা', 'subtitle': '৪ রাকাত ফরজ ও বিতর সালাত', 'category': 'farz', 'order': 5, 'isActive': true},
+    {'id': 'quran', 'title': 'কুরআন তিলাওয়াত', 'subtitle': 'কমপক্ষে ১০ আয়াত বা অর্থসহ ১ রুকু', 'category': 'nafl_zikr', 'order': 6, 'isActive': true},
+    {'id': 'q&a', 'title': 'প্রশ্নোত্তর পাঠ', 'subtitle': 'এই অ্যাপ থেকে কমপক্ষে ৫টি', 'category': 'nafl_zikr', 'order': 7, 'isActive': true},
+    {'id': 'chasht', 'title': 'চাশত সালাত (সালাতুদ দুহা)', 'subtitle': 'সূর্য ওঠার পর ২ থেকে ৪ রাকাত সালাত', 'category': 'nafl_zikr', 'order': 8, 'isActive': true},
+    {'id': 'awwabin', 'title': 'আওয়াবিন সালাত', 'subtitle': 'মাগরিবের পর ৬ রাকাত নফল সালাত', 'category': 'nafl_zikr', 'order': 9, 'isActive': true},
+    {'id': 'durood', 'title': 'দরুদ শরীফ (কমপক্ষে ১০০ বার)', 'subtitle': 'রাসূলুল্লাহ (ﷺ)-এর ওপর ১০০ বার দরুদ পাঠ', 'category': 'nafl_zikr', 'order': 10, 'isActive': true},
+    {'id': 'istighfar', 'title': 'ইস্তিগফার ও জিকির (১০০ বার)', 'subtitle': 'সকাল ও সন্ধ্যার মাসনুন জিকির', 'category': 'nafl_zikr', 'order': 11, 'isActive': true},
+    {'id': 'tahajjud', 'title': 'তাহাজ্জুদ সালাত', 'subtitle': 'রাতের শেষ তৃতীয়াংশে বিশেষ ইবাদত', 'category': 'nafl_zikr', 'order': 12, 'isActive': true},
   ];
 
-  /// ১. ফায়ারবেস থেকে সক্রিয় আমলগুলোর স্ট্রিম (অফলাইনে ক্যাশ/ফলব্যাকসহ)
-  static Stream<List<Map<String, dynamic>>> getAmolListStream() {
+  /// ১. ফায়ারবেস থেকে সক্রিয় আমলগুলোর স্ট্রিম (রিয়েলটাইম আপডেট)
+  static Stream<List<Map<String, dynamic>>> getDynamicAmolsStream() {
     return _firestore
         .collection('muhasaba_amols')
         .where('isActive', isEqualTo: true)
@@ -97,25 +29,28 @@ class MuhasabaFirebaseService {
         .snapshots(includeMetadataChanges: true)
         .map((snapshot) {
       if (snapshot.docs.isNotEmpty) {
-        return snapshot.docs.map((doc) => doc.data()).toList();
+        return snapshot.docs.map((doc) {
+          final data = doc.data();
+          data['id'] = data['id'] ?? doc.id;
+          return data;
+        }).toList();
       }
-      // ফায়ারবেসে ডেটা না থাকলে বা অফলাইনে ক্যাশ না পেলে ডিফল্ট আমল দেখাবে
       return defaultAmols;
     }).handleError((error) {
-      debugPrint('Error getting amols (falling back to default): $error');
+      debugPrint('Error getting amols (fallback to default): $error');
       return defaultAmols;
     });
   }
 
-  /// ২. দৈনিক ব্যানার ও অনুপ্রেরণামূলক হাদিস আনা
-  static Stream<Map<String, dynamic>?> getDailyBannerStream() {
+  /// ২. দৈনিক ব্যানার ও অনুপ্রেরণামূলক হাদিস স্ট্রিম
+  static Stream<Map<String, dynamic>> getDailyBannerStream() {
     return _firestore
         .collection('app_config')
         .doc('muhasaba_banner')
         .snapshots(includeMetadataChanges: true)
         .map((doc) {
       if (doc.exists && doc.data() != null) {
-        return doc.data();
+        return doc.data()!;
       }
       return {
         'title': 'দৈনিক আত্মপর্যালোচনা',
@@ -125,61 +60,5 @@ class MuhasabaFirebaseService {
           'title': 'দৈনিক আত্মপর্যালোচনা',
           'subtitle': 'হিসাব নেওয়ার পূর্বেই নিজের হিসাব নাও। — হযরত উমর (রা.)',
         });
-  }
-
-  /// ৩. ইউজারের আজকের আমলের হিসাব ফায়ারবেসে সিঙ্ক করা (অফলাইন ও অনলাইন সমর্থিত)
-  static Future<void> syncUserAmolRecord({
-    required String userId,
-    required String dateKey, // যেমন: '2026-08-15'
-    required Map<String, bool> amolStatus,
-    required int streakDays,
-  }) async {
-    try {
-      // SetOptions(merge: true) অফলাইনে ডিভাইস স্টোরেজে রাইট করে এবং অনলাইনে অটো সিঙ্ক করে
-      await _firestore
-          .collection('users')
-          .doc(userId)
-          .collection('muhasaba_records')
-          .doc(dateKey)
-          .set({
-        'date': dateKey,
-        'completedAmols': amolStatus,
-        'streakDays': streakDays,
-        'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
-    } catch (e) {
-      debugPrint('Firestore Sync Error: $e');
-    }
-  }
-
-  /// ৪. নির্দিষ্ট কোনো দিনের আমল রেকর্ড ফেচ করা (অফলাইন ক্যাশ ফার্স্ট)
-  static Future<Map<String, dynamic>?> getUserAmolRecord({
-    required String userId,
-    required String dateKey,
-  }) async {
-    try {
-      final docRef = _firestore
-          .collection('users')
-          .doc(userId)
-          .collection('muhasaba_records')
-          .doc(dateKey);
-
-      // অফলাইন এবং অনলাইন উভয় উৎস থেকেই ডেটা আনার চেষ্টা
-      final docSnap = await docRef.get(const GetOptions(source: Source.serverAndCache));
-      if (docSnap.exists) {
-        return docSnap.data();
-      }
-    } catch (e) {
-      try {
-        final docRef = _firestore
-            .collection('users')
-            .doc(userId)
-            .collection('muhasaba_records')
-            .doc(dateKey);
-        final cacheSnap = await docRef.get(const GetOptions(source: Source.cache));
-        return cacheSnap.data();
-      } catch (_) {}
-    }
-    return null;
   }
 }

@@ -53,6 +53,7 @@ flutter:
   assets:
     - assets/logo.png
     - assets/app_icon.png
+    - assets/developer.jpg
     - assets/database/masayel.zip
 
   fonts:

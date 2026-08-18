@@ -22,6 +22,15 @@ class _SplashScreenState extends State<SplashScreen> {
     });
   }
 
+  // 🌟 অ্যাপ ওপেন হওয়ার প্রথম মুহূর্তেই ছবিগুলো মেমরিতে ইনস্ট্যান্ট লোড করার ব্যবস্থা
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    precacheImage(const AssetImage('assets/logo.png'), context);
+    precacheImage(const AssetImage('assets/app_icon.png'), context);
+    precacheImage(const AssetImage('assets/developer.jpg'), context);
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
@@ -44,8 +53,10 @@ class _SplashScreenState extends State<SplashScreen> {
                 ),
                 child: Image.asset(
                   'assets/logo.png',
-                  width: screenWidth * 0.40, // মোবাইলের জন্য আরেকটু মার্জিত ও ছোট সাইজ
+                  width: screenWidth * 0.40, // মোবাইলের জন্য মার্জিত সাইজ
                   fit: BoxFit.contain,
+                  gaplessPlayback: true, // 🌟 কোনো ফ্লিকার বা লোডিং ডিলে হতে দেবে না
+                  filterQuality: FilterQuality.medium,
                 ),
               ),
               

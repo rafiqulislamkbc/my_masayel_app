@@ -21,19 +21,16 @@ class MuhasabaAuthGate extends StatelessWidget {
           );
         }
         
-        // 🌟 লগইন থাকলে সরাসরি ইউজার প্রোফাইল পেজে নিয়ে যাবে (মুহাসাবা পেজে নয়)
         if (snapshot.hasData && snapshot.data != null) {
           return const UserProfilePage();
         }
         
-        // লগইন না থাকলে লগইন/সাইন-আপ পেজ দেখাবে
         return const MuhasabaLoginPage();
       },
     );
   }
 }
 
-/// 👤 ইউজার প্রোফাইল ও অ্যাকাউন্ট ড্যাশবোর্ড পেজ (ডার্ক মোড সাপোর্টেড)
 class UserProfilePage extends StatefulWidget {
   const UserProfilePage({super.key});
 
@@ -169,7 +166,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                       children: [
                         _buildInfoTile(
                           icon: Icons.person_outline,
-                          title: 'পুরো নাম',
+                          title: 'নাম',
                           value: name,
                           isDark: isDark,
                         ),
@@ -190,8 +187,8 @@ class _UserProfilePageState extends State<UserProfilePage> {
                         Divider(height: 1, color: isDark ? Colors.white12 : Colors.grey.shade200),
                         _buildInfoTile(
                           icon: Icons.cloud_done_outlined,
-                          title: 'ক্লাউড ব্যাকআপ ও সিঙ্ক',
-                          value: 'সক্রিয় (মুহাসাবা ও নোটবই সিঙ্ক হচ্ছে)',
+                          title: 'ব্যাকআপ',
+                          value: 'চালু আছে (মুহাসাবা ও নোটবই ব্যাকআপ হচ্ছে...)',
                           valueColor: isDark ? Colors.tealAccent : Colors.teal.shade800,
                           isDark: isDark,
                         ),
@@ -201,7 +198,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
 
                   const SizedBox(height: 28),
 
-                  // লগআউট বাটন
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
@@ -319,7 +315,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
   }
 }
 
-/// 🔐 লগইন ও সাইনআপ পেজ (ডার্ক মোড সাপোর্টেড)
 class MuhasabaLoginPage extends StatefulWidget {
   const MuhasabaLoginPage({super.key});
 
@@ -341,6 +336,136 @@ class _MuhasabaLoginPageState extends State<MuhasabaLoginPage> {
     _passwordController.dispose();
     _nameController.dispose();
     super.dispose();
+  }
+
+  // 🌟 পাসওয়ার্ড ভুলে গেলে ইমেইলে রিসেট লিংক পাঠানোর ফাংশন
+  Future<void> _forgotPassword() async {
+    final resetEmailController = TextEditingController(text: _emailController.text.trim());
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final emailToSend = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'পাসওয়ার্ড পুনরুদ্ধার (Reset)',
+          style: TextStyle(
+            fontFamily: 'SolaimanLipi',
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+            color: isDark ? Colors.tealAccent : Colors.teal,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'আপনার অ্যাকাউন্টের ইমেইল দিন। পাসওয়ার্ড পরিবর্তন করার লিংক ইমেইলে পাঠানো হবে।',
+              style: TextStyle(
+                fontFamily: 'SolaimanLipi',
+                fontSize: 13,
+                color: isDark ? Colors.grey.shade300 : Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: resetEmailController,
+              keyboardType: TextInputType.emailAddress,
+              style: TextStyle(
+                fontFamily: 'SolaimanLipi',
+                color: isDark ? Colors.white : Colors.black87,
+              ),
+              decoration: InputDecoration(
+                hintText: 'ইমেইল ঠিকানা লিখুন',
+                hintStyle: TextStyle(
+                  fontFamily: 'SolaimanLipi',
+                  color: isDark ? Colors.white38 : Colors.black38,
+                ),
+                prefixIcon: Icon(
+                  Icons.email_outlined,
+                  color: isDark ? Colors.tealAccent : Colors.teal,
+                ),
+                filled: true,
+                fillColor: isDark ? const Color(0xFF0F172A) : Colors.grey.shade100,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, null),
+            child: const Text(
+              'বাতিল',
+              style: TextStyle(fontFamily: 'SolaimanLipi', color: Colors.grey),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.teal,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () {
+              final val = resetEmailController.text.trim();
+              if (val.isNotEmpty) {
+                Navigator.pop(ctx, val);
+              }
+            },
+            child: const Text(
+              'লিংক পাঠান',
+              style: TextStyle(fontFamily: 'SolaimanLipi', fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (emailToSend == null || emailToSend.isEmpty) return;
+
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: emailToSend);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: Color(0xFF007A5E),
+            content: Text(
+              'পাসওয়ার্ড পরিবর্তনের লিংক আপনার ইমেইলে পাঠানো হয়েছে। অনুগ্রহ করে ইনবক্স বা স্প্যাম ফোল্ডার চেক করুন।',
+              style: TextStyle(fontFamily: 'SolaimanLipi'),
+            ),
+            duration: Duration(seconds: 4),
+          ),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      String msg = 'পাসওয়ার্ড রিসেট লিংক পাঠাতে সমস্যা হয়েছে';
+      if (e.code == 'user-not-found') {
+        msg = 'এই ইমেইলে কোনো অ্যাকাউন্ট পাওয়া যায়নি';
+      } else if (e.code == 'invalid-email') {
+        msg = 'ইমেইল ফরম্যাট সঠিক নয়';
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.red.shade800,
+            content: Text(msg, style: const TextStyle(fontFamily: 'SolaimanLipi')),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('ত্রুটি: $e', style: const TextStyle(fontFamily: 'SolaimanLipi')),
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _submit() async {
@@ -413,7 +538,7 @@ class _MuhasabaLoginPageState extends State<MuhasabaLoginPage> {
           await firestore.collection('users').doc(user.uid).set({
             'uid': user.uid,
             'email': user.email ?? email,
-            'name': user.displayName ?? 'মুসলিম সাথী',
+            'name': user.displayName ?? 'নাম প্রকাশে অনিচ্ছুক',
             'lastLogin': FieldValue.serverTimestamp(),
           }, SetOptions(merge: true));
         }
@@ -522,7 +647,7 @@ class _MuhasabaLoginPageState extends State<MuhasabaLoginPage> {
               ),
               const SizedBox(height: 6),
               Text(
-                'আপনার আমলের মুহাসাবা ও নোটবই সুরক্ষিত ও ক্লাউডে সিঙ্ক রাখতে সাইন-ইন করুন',
+                'আপনার আমলের মুহাসাবা ও নোটবই সুরক্ষিত ও ব্যাকআপ রাখতে সাইন-ইন করুন',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontFamily: 'SolaimanLipi',
@@ -657,7 +782,32 @@ class _MuhasabaLoginPageState extends State<MuhasabaLoginPage> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 22),
+
+                    // 🌟 পাসওয়ার্ড ভুলে গেছেন? লিংক (লগইন মোডে দেখাবে)
+                    if (!_isSignUp) ...[
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: _forgotPassword,
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.only(top: 6, bottom: 2, right: 2),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: Text(
+                            'পাসওয়ার্ড ভুলে গেছেন?',
+                            style: TextStyle(
+                              fontFamily: 'SolaimanLipi',
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? Colors.tealAccent : const Color(0xFF007A5E),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+
+                    const SizedBox(height: 18),
                     SizedBox(
                       width: double.infinity,
                       height: 48,

@@ -92,7 +92,7 @@ class _CategoryPageState extends State<CategoryPage> {
               },
             ),
             bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 0, // হোম সেকশনের অধীনে সক্রিয়
+        currentIndex: 0,
         onTap: (index) {
           Navigator.pushAndRemoveUntil(
             context,

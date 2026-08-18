@@ -5,7 +5,7 @@ import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:archive/archive.dart'; // 🌟 জিপ ডেটাবেজ আনপ্যাক করার প্যাকেজ
+import 'package:archive/archive.dart';
 
 class DatabaseHelper {
   static Database? _database;
@@ -37,14 +37,12 @@ class DatabaseHelper {
 
     bool isFileMissing = !await file.exists() || (await file.length()) < 1000;
 
-    // 🌟 যদি ডেটাবেজ ফাইলে ডাটা না থাকে (প্রথমবার অ্যাপ ওপেন করার সময়)
     if (isFileMissing) {
       try {
         debugPrint("--> Loading masayel.zip from assets...");
         ByteData data = await rootBundle.load("assets/database/masayel.zip");
         List<int> bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
 
-        // জিপ ডিকোড করে মূল ৪০ এমবি ডেটাবেজ এক্সট্র্যাক্ট করা
         final archive = ZipDecoder().decodeBytes(bytes);
 
         for (final archiveFile in archive) {
@@ -100,23 +98,30 @@ class DatabaseHelper {
     );
   }
 
-  static Future<int> insertNewMasayel(List<dynamic> newMasayelList) async {
+static Future<int> insertNewMasayel(List<dynamic> newMasayelList) async {
     final db = await instance;
     int addedCount = 0;
 
+    final batch = db.batch();
+
     for (var item in newMasayelList) {
       if (item is Map<String, dynamic>) {
-        int result = await db.insert(
-          'masayel',
-          item,
-          conflictAlgorithm: ConflictAlgorithm.ignore,
-        );
+        Map<String, dynamic> masalaItem = Map<String, dynamic>.from(item);
 
-        if (result > 0) {
-          addedCount++;
+        if (masalaItem['id'] != null) {
+          masalaItem['id'] = int.tryParse(masalaItem['id'].toString()) ?? masalaItem['id'];
         }
+
+        batch.insert(
+          'masayel',
+          masalaItem,
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+        addedCount++;
       }
     }
+
+    await batch.commit(noResult: true);
     return addedCount;
   }
 

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'muhasaba_firebase_service.dart';
 
 String toBanglaNumber(dynamic input) {
   const Map<String, String> bnDigits = {
@@ -132,45 +133,84 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
   int userStreakDays = 0;
   bool _isSubmittedToday = false;
   bool _isSaving = false;
+  bool _isRefreshing = false;
 
   DistrictData selectedDistrict = all64Districts[0];
   String selectedFilter = 'all';
 
   Timer? _timer;
+  StreamSubscription<User?>? _authSubscription;
+  StreamSubscription<List<Map<String, dynamic>>>? _amolsSubscription;
+
   String currentWaqt = 'যোহর';
   String remainingFormatted = '৪ ঘণ্টা ৩৪ মিনিট বাকি';
   String remainingDigital = '০৪:৩৪:০০';
 
-  final List<AmolItem> amols = [
-    AmolItem(id: 'fajr', title: 'ফজর', subtitle: '২ রাকাত সুন্নাত ও ২ রাকাত ফরজ', category: 'farz'),
-    AmolItem(id: 'dhuhr', title: 'যোহর', subtitle: '৪ রাকাত ফরজ ও সুন্নাত সালাত', category: 'farz'),
-    AmolItem(id: 'asr', title: 'আসর', subtitle: '৪ রাকাত ফরজ সালাত', category: 'farz'),
-    AmolItem(id: 'maghrib', title: 'মাগরিব', subtitle: '৩ রাকাত ফরজ ও ২ রাকাত সুন্নাত', category: 'farz'),
-    AmolItem(id: 'isha', title: 'এশা', subtitle: '৪ রাকাত ফরজ ও বিতর সালাত', category: 'farz'),
-    AmolItem(id: 'quran', title: 'কুরআন তিলাওয়াত', subtitle: 'কমপক্ষে ১০ আয়াত বা অর্থসহ ১ রুকু', category: 'nafl_zikr'),
-    AmolItem(id: 'q&a', title: 'প্রশ্নোত্তর পাঠ', subtitle: 'এই অ্যাপ থেকে কমপক্ষে ৫টি', category: 'nafl_zikr'),
-    AmolItem(id: 'chasht', title: 'চাশত সালাত (সালাতুদ দুহা)', subtitle: 'সূর্য ওঠার পর ২ থেকে ৪ রাকাত সালাত', category: 'nafl_zikr'),
-    AmolItem(id: 'awwabin', title: 'আওয়াবিন সালাত', subtitle: 'মাগরিবের পর ৬ রাকাত নফল সালাত', category: 'nafl_zikr'),
-    AmolItem(id: 'durood', title: 'দরুদ শরীফ (কমপক্ষে ১০০ বার)', subtitle: 'রাসূলুল্লাহ (ﷺ)-এর ওপর ১০০ বার দরুদ পাঠ', category: 'nafl_zikr'),
-    AmolItem(id: 'istighfar', title: 'ইস্তিগফার ও জিকির (১০০ বার)', subtitle: 'সকাল ও সন্ধ্যার মাসনুন জিকির', category: 'nafl_zikr'),
-    AmolItem(id: 'tahajjud', title: 'তাহাজ্জুদ সালাত', subtitle: 'রাতের শেষ তৃতীয়াংশে বিশেষ ইবাদত', category: 'nafl_zikr'),
-  ];
+  List<AmolItem> amols = [];
 
   @override
   void initState() {
     super.initState();
+    _initAmolsFromDefaults();
+    _listenToDynamicAmols();
     _loadCurrentUserData();
     _updatePrayerTime();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) => _updatePrayerTime());
+
+    _authSubscription = FirebaseAuth.instance.authStateChanges().listen((User? user) {
+      if (mounted) {
+        _loadCurrentUserData();
+      }
+    });
   }
 
   @override
   void dispose() {
     _timer?.cancel();
+    _authSubscription?.cancel();
+    _amolsSubscription?.cancel();
     super.dispose();
   }
 
-  Future<void> _loadCurrentUserData() async {
+  void _initAmolsFromDefaults() {
+    amols = MuhasabaFirebaseService.defaultAmols.map((d) {
+      return AmolItem(
+        id: d['id'].toString(),
+        title: d['title'].toString(),
+        subtitle: (d['subtitle'] ?? '').toString(),
+        category: (d['category'] ?? 'farz').toString(),
+      );
+    }).toList();
+  }
+
+  // 🌟 ফায়ারবেস থেকে রিমোটলি আমল পরিবর্তন লোড করা
+  void _listenToDynamicAmols() {
+    _amolsSubscription = MuhasabaFirebaseService.getDynamicAmolsStream().listen((dynamicList) async {
+      if (!mounted) return;
+      final prefs = await SharedPreferences.getInstance();
+      final user = FirebaseAuth.instance.currentUser;
+      final uid = user?.uid ?? 'guest';
+      final todayKey = DateTime.now().toIso8601String().substring(0, 10);
+
+      setState(() {
+        amols = dynamicList.map((d) {
+          final id = d['id'].toString();
+          final savedStatus = prefs.getBool('amol_${uid}_${todayKey}_$id') ?? false;
+          return AmolItem(
+            id: id,
+            title: d['title'].toString(),
+            subtitle: (d['subtitle'] ?? '').toString(),
+            category: (d['category'] ?? 'farz').toString(),
+            isCompleted: savedStatus,
+          );
+        }).toList();
+      });
+    });
+  }
+
+  Future<void> _loadCurrentUserData({bool showFeedback = false}) async {
+    if (mounted) setState(() => _isRefreshing = true);
+
     final user = FirebaseAuth.instance.currentUser;
     final prefs = await SharedPreferences.getInstance();
     final todayKey = DateTime.now().toIso8601String().substring(0, 10);
@@ -184,7 +224,13 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
         setState(() {
           _isSubmittedToday = false;
           userStreakDays = 0;
+          _isRefreshing = false;
         });
+        if (showFeedback) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('কোনো অ্যাকাউন্ট লগইন করা নেই')),
+          );
+        }
       }
       return;
     }
@@ -201,14 +247,6 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
       if (userSnap.exists && userSnap.data() != null) {
         final userData = userSnap.data()!;
         districtId = userData['districtId']?.toString() ?? 'dhaka';
-      } else {
-        await userRef.set({
-          'uid': uid,
-          'email': user.email ?? '',
-          'name': user.displayName ?? 'নাম প্রকাশে অনিচ্ছুক',
-          'createdAt': FieldValue.serverTimestamp(),
-          'lastLogin': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
       }
 
       savedDistrictId = prefs.getString('user_district_id') ?? districtId;
@@ -250,7 +288,17 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
           _isSubmittedToday = submittedToday;
           userStreakDays = streak;
           selectedDistrict = selected;
+          _isRefreshing = false;
         });
+
+        if (showFeedback) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('মুহাসাবার তথ্য রিফ্রেশ হয়েছে'),
+              backgroundColor: Color(0xFF007A5E),
+            ),
+          );
+        }
       }
     } catch (e) {
       debugPrint('Firestore Load Error: $e');
@@ -265,10 +313,7 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
         setState(() {
           _isSubmittedToday = localSubmitted;
           userStreakDays = localStreak;
-          selectedDistrict = all64Districts.firstWhere(
-            (d) => d.id == savedDistrictId,
-            orElse: () => all64Districts.first,
-          );
+          _isRefreshing = false;
         });
       }
     }
@@ -515,7 +560,7 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: isDark ? const Color(0xFF1E2923) : Colors.white,
+      backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -688,265 +733,334 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
             ),
           ],
         ),
+        actions: [
+          IconButton(
+            icon: _isRefreshing
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                  )
+                : const Icon(Icons.refresh),
+            tooltip: 'তথ্য রিফ্রেশ করুন',
+            onPressed: _isRefreshing ? null : () => _loadCurrentUserData(showFeedback: true),
+          ),
+        ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (user != null)
-              Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(
-                  color: cardBg,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: cardBorder),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.account_circle, color: Color(0xFF007A5E), size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'ব্যবহারকারী: ${user.displayName ?? user.email ?? "নাম প্রকাশে অনিচ্ছুক"}',
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: textPrimary),
-                        overflow: TextOverflow.ellipsis,
+      body: RefreshIndicator(
+        color: const Color(0xFF007A5E),
+        onRefresh: () => _loadCurrentUserData(showFeedback: true),
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // 🌟 ফায়ারবেস থেকে ডায়নামিক অনুপ্রেরণামূলক ব্যানার
+              StreamBuilder<Map<String, dynamic>>(
+                stream: MuhasabaFirebaseService.getDailyBannerStream(),
+                builder: (context, snapshot) {
+                  final bannerData = snapshot.data;
+                  final title = bannerData?['title'] ?? 'দৈনিক আত্মপর্যালোচনা';
+                  final subtitle = bannerData?['subtitle'] ??
+                      'হিসাব নেওয়ার পূর্বেই নিজের হিসাব নাও। — হযরত উমর (রা.)';
+
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF1E2923) : const Color(0xFFE6F4F0),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: isDark ? const Color(0xFF2E4D3E) : const Color(0xFFA7F3D0),
                       ),
                     ),
-                    const Icon(Icons.cloud_done, color: Color(0xFF007A5E), size: 18),
-                  ],
-                ),
-              ),
-
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: timerCardBg,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: timerCardBorder, width: 1.2),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha:isDark ? 0.2 : 0.02),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      InkWell(
-                        onTap: _openDistrictPicker,
-                        borderRadius: BorderRadius.circular(10),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: cardBg,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: isDark ? const Color(0xFF344E44) : const Color(0xFFA7F3D0)),
-                          ),
-                          child: Row(
+                    child: Row(
+                      children: [
+                        const Icon(Icons.auto_awesome, color: Color(0xFF007A5E), size: 20),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Icon(Icons.location_on, color: Color(0xFF007A5E), size: 16),
-                              const SizedBox(width: 4),
                               Text(
-                                '${selectedDistrict.nameBn} জেলা',
-                                style: const TextStyle(color: Color(0xFF007A5E), fontWeight: FontWeight.bold, fontSize: 13),
+                                title,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                  color: Color(0xFF007A5E),
+                                ),
                               ),
-                              const Icon(Icons.arrow_drop_down, color: Color(0xFF007A5E), size: 18),
+                              const SizedBox(height: 2),
+                              Text(
+                                subtitle,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: isDark ? Colors.white70 : Colors.black87,
+                                ),
+                              ),
                             ],
                           ),
                         ),
-                      ),
-                      Text(
-                        getBanglaFullDate(DateTime.now()),
-                        style: TextStyle(color: textSecondary, fontSize: 13, fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                  Divider(height: 22, color: timerCardBorder),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('চলমান ওয়াক্ত: $currentWaqt', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: textPrimary)),
-                          const SizedBox(height: 3),
-                          Text('ওয়াক্ত শেষ হতে সময় বাকি:', style: TextStyle(color: textSecondary, fontSize: 12)),
-                        ],
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF007A5E),
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF007A5E).withValues(alpha:0.3),
-                              blurRadius: 6,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Text(
-                          remainingFormatted,
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                  );
+                },
               ),
-            ),
-            const SizedBox(height: 14),
 
-            InkWell(
-              onTap: () {},
-              borderRadius: BorderRadius.circular(24),
-              child: Container(
+              if (user != null)
+                Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: cardBg,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: cardBorder),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.account_circle, color: Color(0xFF007A5E), size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'ব্যবহারকারী: ${user.displayName ?? user.email ?? "নাম প্রকাশে অনিচ্ছুক"}',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: textPrimary),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const Icon(Icons.cloud_done, color: Color(0xFF007A5E), size: 18),
+                    ],
+                  ),
+                ),
+
+              Container(
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: isDark ? const Color.fromARGB(5, 7, 7, 7) : const Color(0xFF00897B),
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: const Color(0xFF005A4E), width: 1.2),
+                  color: timerCardBg,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: timerCardBorder, width: 1.2),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha:isDark ? 0.35 : 0.15),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
+                      color: Colors.black.withValues(alpha:isDark ? 0.2 : 0.02),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
                     ),
                   ],
                 ),
                 child: Column(
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 26, horizontal: 16),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            width: 56,
-                            height: 56,
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFFBBF24),
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Color(0x66FBBF24),
-                                  blurRadius: 12,
-                                  offset: Offset(0, 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        InkWell(
+                          onTap: _openDistrictPicker,
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: cardBg,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: isDark ? const Color(0xFF344E44) : const Color(0xFFA7F3D0)),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.location_on, color: Color(0xFF007A5E), size: 16),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${selectedDistrict.nameBn} জেলা',
+                                  style: const TextStyle(color: Color(0xFF007A5E), fontWeight: FontWeight.bold, fontSize: 13),
                                 ),
+                                const Icon(Icons.arrow_drop_down, color: Color(0xFF007A5E), size: 18),
                               ],
                             ),
-                            child: const Icon(Icons.emoji_events_rounded, color: Colors.white, size: 34),
                           ),
-                          const SizedBox(width: 16),
-                          Text(
-                            toBanglaNumber(userStreakDays),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 52,
-                              fontWeight: FontWeight.w900,
-                              height: 1,
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                        Text(
+                          getBanglaFullDate(DateTime.now()),
+                          style: TextStyle(color: textSecondary, fontSize: 13, fontWeight: FontWeight.bold),
+                        ),
+                      ],
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 16),
-                      decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF18382E) : const Color(0xFFD8F3E5),
-                        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(23)),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.lock_outline_rounded, size: 16, color: isDark ? const Color(0xFF6EE7B7) : const Color(0xFF004D40)),
-                          const SizedBox(width: 6),
-                          Text(
-                            '${toBanglaNumber(userStreakDays)} দিন আমলের ধারাবাহিকতা',
-                            style: TextStyle(
-                              color: isDark ? const Color(0xFF6EE7B7) : const Color(0xFF004D40),
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
+                    Divider(height: 22, color: timerCardBorder),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('চলমান ওয়াক্ত: $currentWaqt', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: textPrimary)),
+                            const SizedBox(height: 3),
+                            Text('ওয়াক্ত শেষ হতে সময় বাকি:', style: TextStyle(color: textSecondary, fontSize: 12)),
+                          ],
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF007A5E),
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF007A5E).withValues(alpha:0.3),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
+                          child: Text(
+                            remainingFormatted,
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
-            ),
-            const SizedBox(height: 18),
+              const SizedBox(height: 14),
 
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('আজকের আমল তালিকা', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: textPrimary)),
-                Row(
-                  children: [
-                    _filterChip('all', 'সব', isDark),
-                    const SizedBox(width: 6),
-                    _filterChip('farz', 'নামাজ', isDark),
-                    const SizedBox(width: 6),
-                    _filterChip('nafl_zikr', 'নফল/জিকির', isDark),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: filteredAmols.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 10),
-              itemBuilder: (context, index) {
-                final amol = filteredAmols[index];
-                final isDone = amol.isCompleted;
-
-                return Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(16),
-                    onTap: _isSubmittedToday
-                        ? null
-                        : () {
-                            setState(() {
-                              amol.isCompleted = !amol.isCompleted;
-                            });
-                          },
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 180),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                      decoration: BoxDecoration(
-                        color: _isSubmittedToday
-                            ? (isDone ? const Color(0xFF007A5E) : (isDark ? const Color(0xFF141C18) : const Color(0xFFF9FAFB)))
-                            : (isDone ? const Color(0xFF007A5E) : cardBg),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: isDone ? const Color(0xFF00664E) : cardBorder,
-                          width: 1.2,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: isDone
-                                ? const Color(0xFF007A5E).withValues(alpha:0.2)
-                                : Colors.black.withValues(alpha:isDark ? 0.15 : 0.02),
-                            blurRadius: isDone ? 8 : 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
+              InkWell(
+                onTap: () {},
+                borderRadius: BorderRadius.circular(24),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color.fromARGB(5, 7, 7, 7) : const Color(0xFF00897B),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: const Color(0xFF005A4E), width: 1.2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha:isDark ? 0.35 : 0.15),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
                       ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 26, horizontal: 16),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              width: 56,
+                              height: 56,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFFBBF24),
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Color(0x66FBBF24),
+                                    blurRadius: 12,
+                                    offset: Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(Icons.emoji_events_rounded, color: Colors.white, size: 34),
+                            ),
+                            const SizedBox(width: 16),
+                            Text(
+                              toBanglaNumber(userStreakDays),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 52,
+                                fontWeight: FontWeight.w900,
+                                height: 1,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF18382E) : const Color(0xFFD8F3E5),
+                          borderRadius: const BorderRadius.vertical(bottom: Radius.circular(23)),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.lock_outline_rounded, size: 16, color: isDark ? const Color(0xFF6EE7B7) : const Color(0xFF004D40)),
+                            const SizedBox(width: 6),
+                            Text(
+                              '${toBanglaNumber(userStreakDays)} দিন আমলের ধারাবাহিকতা',
+                              style: TextStyle(
+                                color: isDark ? const Color(0xFF6EE7B7) : const Color(0xFF004D40),
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('আজকের আমল তালিকা', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: textPrimary)),
+                  Row(
+                    children: [
+                      _filterChip('all', 'সব', isDark),
+                      const SizedBox(width: 6),
+                      _filterChip('farz', 'নামাজ', isDark),
+                      const SizedBox(width: 6),
+                      _filterChip('nafl_zikr', 'নফল/জিকির', isDark),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: filteredAmols.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                itemBuilder: (context, index) {
+                  final amol = filteredAmols[index];
+                  final isDone = amol.isCompleted;
+
+                  return Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: _isSubmittedToday
+                          ? null
+                          : () {
+                              setState(() {
+                                amol.isCompleted = !amol.isCompleted;
+                              });
+                            },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 180),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        decoration: BoxDecoration(
+                          color: _isSubmittedToday
+                              ? (isDone ? const Color(0xFF007A5E) : (isDark ? const Color(0xFF141C18) : const Color(0xFFF9FAFB)))
+                              : (isDone ? const Color(0xFF007A5E) : cardBg),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isDone ? const Color(0xFF00664E) : cardBorder,
+                            width: 1.2,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: isDone
+                                  ? const Color(0xFF007A5E).withValues(alpha:0.2)
+                                  : Colors.black.withValues(alpha:isDark ? 0.15 : 0.02),
+                              blurRadius: isDone ? 8 : 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
@@ -1082,8 +1196,9 @@ class _AmolMuhasabaPageState extends State<AmolMuhasabaPage> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _filterChip(String key, String label, bool isDark) {
     final isSelected = selectedFilter == key;
